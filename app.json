@@ -14,7 +14,8 @@
       "backgroundColor": "#F4F1EC"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pharmaciegarde.app"
     },
     "android": {
       "package": "com.pharmaciegarde.app",

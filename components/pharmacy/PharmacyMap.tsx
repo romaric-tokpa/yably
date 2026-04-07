@@ -1,6 +1,10 @@
+import {
+  Camera,
+  MapView,
+  MarkerView,
+} from '@maplibre/maplibre-react-native';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Text, View } from 'react-native';
-import MapView, { type Region, Marker } from 'react-native-maps';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -14,7 +18,9 @@ import { useAppTheme } from '@/components/common/appThemeContext';
 import { GlassPanel } from '@/components/common/glassPanel';
 import { YablyLogo } from '@/components/common/yablyLogo';
 import type { ThemeColors } from '@/lib/constants';
+import { haversineDistanceMeters } from '@/lib/distance';
 import { formatDistance } from '@/lib/format';
+import { buildRasterMapStyle } from '@/lib/maplibre-style';
 import {
   getPharmacyVerificationTone,
   type PharmacyVerificationTone,
@@ -26,11 +32,12 @@ import type { PharmacyMapProps } from './pharmacy-map-props';
 export type { PharmacyMapProps } from './pharmacy-map-props';
 
 const ABIDJAN_CENTER: [number, number] = [-4.008, 5.36];
-const DEFAULT_DELTA = 0.12;
+const DEFAULT_ZOOM = 11;
 
+const MAP_MARGIN_M = 2000;
 const USER_MARKER_BLUE = '#3B82F6';
 
-const FIT_PADDING = { top: 88, right: 52, bottom: 128, left: 52 };
+const FIT_PADDING: [number, number, number, number] = [88, 52, 128, 52];
 
 function markerHex(tone: PharmacyVerificationTone, pal: ThemeColors): string {
   switch (tone) {
@@ -48,7 +55,6 @@ function nearestPharmacy(list: PharmacyDeGarde[]): PharmacyDeGarde | null {
   return list.reduce((a, b) => (a.distance_km <= b.distance_km ? a : b));
 }
 
-/** [longitude, latitude] — aligné sur MapLibre historique. */
 function computeInitialCenter(
   userLocation: { latitude: number; longitude: number } | null,
   pharmacies: PharmacyDeGarde[],
@@ -168,16 +174,14 @@ function PharmacyMarkerOnMap({ pharmacy, pal, onVoirDetails }: PharmacyMarkerOnM
   const isPulse = tone === 'verified';
 
   return (
-    <Marker
-      coordinate={{ latitude: pharmacy.latitude, longitude: pharmacy.longitude }}
+    <MarkerView
+      coordinate={[pharmacy.longitude, pharmacy.latitude]}
       anchor={{ x: 0.5, y: 1 }}
-      onPress={onVoirDetails}
-      tracksViewChanges={false}
     >
       <View className="items-center" style={{ width: TEARDROP + 8 }}>
-        <View accessibilityRole="button" accessibilityLabel={`Pharmacie ${pharmacy.name}`}>
+        <Pressable accessibilityRole="button" onPress={onVoirDetails} hitSlop={8}>
           <PharmacyMapMarkerPin color={color} pulse={isPulse} />
-        </View>
+        </Pressable>
         <View
           className="mt-1 max-w-[140px] rounded-lg border px-2 py-1"
           style={{
@@ -210,7 +214,7 @@ function PharmacyMarkerOnMap({ pharmacy, pal, onVoirDetails }: PharmacyMarkerOnM
           </View>
         </View>
       </View>
-    </Marker>
+    </MarkerView>
   );
 }
 
@@ -234,7 +238,7 @@ function LegendItem({
 }
 
 /**
- * Carte native (react-native-maps) — compatible Expo Go ; fonds Apple/Google selon plateforme.
+ * Carte MapLibre + tuiles OSM / MapTiler (sans facturation Google Maps sur la tuile).
  */
 export function PharmacyMap({
   pharmacies,
@@ -243,56 +247,86 @@ export function PharmacyMap({
 }: PharmacyMapProps) {
   const { theme: pal } = useAppTheme();
 
-  const initialRegion = useMemo((): Region => {
-    const [lng, lat] = computeInitialCenter(userLocation, pharmacies);
-    return {
-      latitude: lat,
-      longitude: lng,
-      latitudeDelta: DEFAULT_DELTA,
-      longitudeDelta: DEFAULT_DELTA,
-    };
-  }, [userLocation, pharmacies]);
+  const maptilerKey =
+    typeof process.env.EXPO_PUBLIC_MAPTILER_API_KEY === 'string'
+      ? process.env.EXPO_PUBLIC_MAPTILER_API_KEY
+      : undefined;
+  const mapStyle = useMemo(() => buildRasterMapStyle(maptilerKey), [maptilerKey]);
 
-  const mapRef = useRef<MapView>(null);
+  const initialCenter = useMemo(
+    () => computeInitialCenter(userLocation, pharmacies),
+    [userLocation, pharmacies],
+  );
+
+  const cameraRef = useRef<React.ElementRef<typeof Camera>>(null);
   const pharmaciesRef = useRef(pharmacies);
   const userRef = useRef(userLocation);
   pharmaciesRef.current = pharmacies;
   userRef.current = userLocation;
 
   const fitMapToMarkers = useCallback(() => {
-    const map = mapRef.current;
-    if (map === null) {
+    const cam = cameraRef.current;
+    if (cam === null) {
       return;
     }
+
+    const coords: [number, number][] = [];
     const ul = userRef.current;
     const list = pharmaciesRef.current;
-    const coords: { latitude: number; longitude: number }[] = [];
     if (ul !== null) {
-      coords.push({ latitude: ul.latitude, longitude: ul.longitude });
+      coords.push([ul.longitude, ul.latitude]);
     }
     for (const p of list) {
-      coords.push({ latitude: p.latitude, longitude: p.longitude });
+      coords.push([p.longitude, p.latitude]);
     }
+
     if (coords.length === 0) {
       return;
     }
+
     if (coords.length === 1) {
-      const c = coords[0] ?? { latitude: ABIDJAN_CENTER[1], longitude: ABIDJAN_CENTER[0] };
-      map.animateToRegion(
-        {
-          latitude: c.latitude,
-          longitude: c.longitude,
-          latitudeDelta: 0.06,
-          longitudeDelta: 0.06,
-        },
-        400,
-      );
+      const c = coords[0] ?? ABIDJAN_CENTER;
+      cam.moveTo(c, 300);
+      void cam.zoomTo(14, 300);
       return;
     }
-    map.fitToCoordinates(coords, {
-      edgePadding: FIT_PADDING,
-      animated: true,
-    });
+
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+    for (const [lng, lat] of coords) {
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+      minLng = Math.min(minLng, lng);
+      maxLng = Math.max(maxLng, lng);
+    }
+
+    const ne: [number, number] = [maxLng, maxLat];
+    const sw: [number, number] = [minLng, minLat];
+
+    if (ul !== null && list.length > 0) {
+      const closest = nearestPharmacy(list);
+      if (closest !== null) {
+        const radiusM =
+          haversineDistanceMeters(
+            ul.latitude,
+            ul.longitude,
+            closest.latitude,
+            closest.longitude,
+          ) + MAP_MARGIN_M;
+        const padM = Math.max(radiusM * 0.05, 800);
+        const dLat = padM / 111_320;
+        const cosLat = Math.cos((ul.latitude * Math.PI) / 180);
+        const dLng = padM / (111_320 * Math.max(cosLat, 0.25));
+        const nne: [number, number] = [maxLng + dLng, maxLat + dLat];
+        const ssw: [number, number] = [minLng - dLng, minLat - dLat];
+        cam.fitBounds(nne, ssw, FIT_PADDING, 400);
+        return;
+      }
+    }
+
+    cam.fitBounds(ne, sw, FIT_PADDING, 400);
   }, []);
 
   useEffect(() => {
@@ -305,30 +339,33 @@ export function PharmacyMap({
   return (
     <View className="min-h-[320px] flex-1 overflow-hidden">
       <MapView
-        ref={mapRef}
         style={{ flex: 1 }}
-        initialRegion={initialRegion}
-        mapPadding={{ top: 8, right: 0, bottom: 104, left: 0 }}
-        onMapReady={() => {
+        mapStyle={mapStyle}
+        logoEnabled={false}
+        attributionEnabled
+        contentInset={[8, 0, 104, 0]}
+        onDidFinishLoadingMap={() => {
           fitMapToMarkers();
         }}
-        showsUserLocation={false}
-        showsCompass={false}
       >
+        <Camera
+          ref={cameraRef}
+          defaultSettings={{
+            centerCoordinate: initialCenter,
+            zoomLevel: DEFAULT_ZOOM,
+          }}
+        />
+
         {userLocation !== null ? (
-          <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
+          <MarkerView
+            coordinate={[userLocation.longitude, userLocation.latitude]}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
           >
             <View
               className="h-6 w-6 rounded-full border-[3px] border-white"
               style={{ backgroundColor: USER_MARKER_BLUE }}
             />
-          </Marker>
+          </MarkerView>
         ) : null}
 
         {pharmacies.map((p) => (
