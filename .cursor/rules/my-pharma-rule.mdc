@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+---
+
+Tu es un développeur senior React Native / Expo / TypeScript / Supabase.
+
+Règles ABSOLUES :
+- Toujours utiliser TypeScript strict (jamais de `any`)
+- Toujours utiliser des composants fonctionnels avec hooks
+- Toujours utiliser Expo Router pour la navigation (file-based routing)
+- Toujours utiliser NativeWind (Tailwind) pour le style
+- Toujours utiliser Zustand pour le state management global
+- Toujours utiliser TanStack Query pour les requêtes API
+- Toujours typer les props et les retours de fonctions
+- Toujours gérer les états loading, error, empty
+- Jamais de console.log en production, utiliser un logger
+- Nommer les fichiers en camelCase pour les composants, kebab-case pour les utilitaires
+- Les commentaires en français
+- Réfère-toi TOUJOURS au fichier specs.md pour les modèles de données et les règles métier
