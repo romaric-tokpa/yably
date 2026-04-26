@@ -2,26 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Variables alignées sur lib/constants.ts (thème jour — specs §5.1).
+ */
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 220 13% 13%;
+    --background: 36 33% 97%;
+    --foreground: 210 9% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 220 13% 13%;
-    --primary: 160 84% 28%;
+    --card-foreground: 210 9% 13%;
+    --primary: 163 81% 27%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 13% 13%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 13% 13%;
-    --destructive: 0 72% 51%;
+    --secondary: 36 24% 95%;
+    --secondary-foreground: 210 9% 13%;
+    --muted: 36 24% 95%;
+    --muted-foreground: 220 11% 47%;
+    --accent: 36 24% 95%;
+    --accent-foreground: 163 81% 27%;
+    --destructive: 355 65% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 160 84% 28%;
-    --radius: 0.5rem;
+    --border: 40 20% 91%;
+    --input: 40 20% 91%;
+    --ring: 163 81% 27%;
+    --radius: 0.875rem;
+    --brand-accent: 28 75% 56%;
+    --brand-accent-muted: 28 75% 94%;
   }
 }
 
@@ -31,9 +36,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Outfit', system-ui, sans-serif;
   }
 }
 
 .leaflet-container {
-  @apply z-0 h-full w-full rounded-lg;
+  @apply z-0 h-full w-full rounded-2xl border border-border;
 }

@@ -32,6 +32,7 @@ const rpcRow = {
   name: 'Pharmacie Garde Test',
   address: 'Boulevard test',
   commune: 'Plateau',
+  city: 'Abidjan',
   latitude: '5.32',
   longitude: '-4.01',
   phone_primary: '+2250102030405',
@@ -100,6 +101,7 @@ describe('usePharmacies', () => {
         id: 'p-garde',
         name: 'Pharmacie Garde Test',
         commune: 'Plateau',
+        city: 'Abidjan',
         distance_km: 1.2,
       }),
     );

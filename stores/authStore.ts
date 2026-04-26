@@ -13,6 +13,7 @@ import {
   type RegistrationMeta,
   registrationMetaFromUserMetadata,
 } from '@/lib/auth-registration-meta';
+import { isStaleStoredSessionAuthMessage } from '@/lib/auth-session-recovery';
 import { logger } from '@/lib/logger';
 import {
   CI_INTERNATIONAL_PREFIX,
@@ -202,7 +203,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     const { error } = await supabase.auth.signOut();
     if (error !== null) {
       logger.error('signOut', error);
-      throw new Error(error.message);
+      await supabase.auth.signOut({ scope: 'local' });
     }
     set({ profile: null, userId: null, registrationMeta: null });
   },
@@ -230,10 +231,32 @@ let removeAuthListener: (() => void) | null = null;
 export function initAuthStore(): () => void {
   authListenerRefCount += 1;
   if (removeAuthListener === null) {
-    void supabase.auth.getSession().then(({ data }) => {
-      syncSessionToStore(data.session ?? null);
-      void useAuthStore.getState().fetchProfile();
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error !== null && isStaleStoredSessionAuthMessage(error.message)) {
+          void supabase.auth.signOut({ scope: 'local' }).then(() => {
+            syncSessionToStore(null);
+            void useAuthStore.getState().fetchProfile();
+          });
+          return;
+        }
+        syncSessionToStore(data.session ?? null);
+        void useAuthStore.getState().fetchProfile();
+      })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (isStaleStoredSessionAuthMessage(msg)) {
+          void supabase.auth.signOut({ scope: 'local' }).then(() => {
+            syncSessionToStore(null);
+            void useAuthStore.getState().fetchProfile();
+          });
+          return;
+        }
+        logger.error('getSession', e);
+        syncSessionToStore(null);
+        void useAuthStore.getState().fetchProfile();
+      });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       syncSessionToStore(session ?? null);
       void useAuthStore.getState().fetchProfile();

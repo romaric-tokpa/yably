@@ -6,6 +6,8 @@ export interface PharmacyDeGarde {
   name: string;
   address: string;
   commune: string;
+  /** Ville (ex. Abidjan), alignée sur la saisie admin */
+  city: string;
   latitude: number;
   longitude: number;
   phone_primary: string;

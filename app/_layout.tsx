@@ -13,15 +13,18 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
+import { Image } from 'expo-image';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { PushToastHost } from '@/components/common/pushToastHost';
 import { useAppTheme } from '@/components/common/appThemeContext';
 import { ThemeProvider as AppThemeProvider } from '@/components/common/ThemeProvider';
 import { useNotifications } from '@/hooks/useNotifications';
+import { theme } from '@/lib/constants';
 import { initAuthStore, useAuthStore } from '@/stores/authStore';
 
 import '../global.css';
@@ -35,6 +38,41 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+const splashLogo = require('../assets/images/splash-icon.png');
+
+/** Web : pas d’écran splash natif comme sur iOS/Android — logo + indicateur pendant le chargement des polices. */
+function BootSplashView() {
+  return (
+    <View
+      style={[bootStyles.root, { backgroundColor: theme.day.bg }]}
+      accessibilityLabel="Chargement de l’application"
+    >
+      <Image
+        source={splashLogo}
+        style={bootStyles.logo}
+        contentFit="contain"
+        transition={0}
+      />
+      <ActivityIndicator color={theme.day.primary} size="large" style={bootStyles.spinner} />
+    </View>
+  );
+}
+
+const bootStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 160,
+    height: 160,
+  },
+  spinner: {
+    marginTop: 28,
+  },
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -67,7 +105,12 @@ export default function RootLayout() {
   }, [loaded, authHydrated]);
 
   if (!loaded) {
-    return null;
+    return Platform.OS === 'web' ? <BootSplashView /> : null;
+  }
+
+  /* Web : garder logo + spinner jusqu’à session locale lue (pas d’overlay splash système). */
+  if (Platform.OS === 'web' && !authHydrated) {
+    return <BootSplashView />;
   }
 
   return (

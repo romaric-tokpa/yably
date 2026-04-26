@@ -28,6 +28,7 @@ export function mapRpcRowToPharmacyDeGarde(row: RpcRow): PharmacyDeGarde {
     name: row.name,
     address: row.address,
     commune: row.commune,
+    city: row.city,
     latitude: toNum(row.latitude),
     longitude: toNum(row.longitude),
     phone_primary: row.phone_primary,

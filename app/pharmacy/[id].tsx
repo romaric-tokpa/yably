@@ -354,6 +354,14 @@ function PharmacyDetailScreenInner() {
                     >
                       {p.address}
                     </Text>
+                    {p.commune.length > 0 || p.city.length > 0 ? (
+                      <Text
+                        className="mt-0.5 text-[11px] leading-5"
+                        style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
+                      >
+                        {[p.commune, p.city].filter((s) => s.length > 0).join(' · ')}
+                      </Text>
+                    ) : null}
                     {p.pharmacist_name !== null ? (
                       <View className="mt-1.5 flex-row items-center gap-1.5">
                         <User size={13} color={t.textMuted} strokeWidth={2} />

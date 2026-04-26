@@ -26,6 +26,21 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Si GoTrue ne répond pas, le client ne purge pas toujours le stockage : on force pour débloquer l’UI. */
+function purgeSupabaseAuthFromBrowserStorage(): void {
+  if (typeof window === 'undefined') return;
+  const toRemove: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const key = window.localStorage.key(i);
+    if (key !== null && key.startsWith('sb-') && key.includes('auth-token')) {
+      toRemove.push(key);
+    }
+  }
+  for (const key of toRemove) {
+    window.localStorage.removeItem(key);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profileRole, setProfileRole] = useState<ProfileRole | null>(null);
@@ -97,7 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error !== null) {
+      void (await supabase.auth.signOut({ scope: 'local' }));
+      purgeSupabaseAuthFromBrowserStorage();
+    }
+    setSession(null);
     setProfileRole(null);
   }, []);
 

@@ -1,5 +1,7 @@
+import { Building2, Inbox, Loader2, Pencil, Plus, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { AdminPageHeader } from '@/components/AdminPageHeader';
 import { MapPicker } from '@/components/MapPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -242,11 +244,13 @@ export function PharmaciesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pharmacies</h1>
-        <p className="text-sm text-muted-foreground">A-01 — CRUD, photo, carte GPS.</p>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        icon={Building2}
+        title="Pharmacies"
+        code="A-01"
+        description="CRUD, photo, carte GPS."
+      />
 
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -255,12 +259,18 @@ export function PharmaciesPage() {
             <p className="text-sm text-muted-foreground">{filteredLabel}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              placeholder="Recherche (nom, adresse, téléphone)…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="sm:w-64"
-            />
+            <div className="relative sm:w-64">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                placeholder="Recherche (nom, adresse, téléphone)…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             <Select value={communeFilter} onValueChange={setCommuneFilter}>
               <SelectTrigger className="sm:w-48">
                 <SelectValue placeholder="Commune" />
@@ -274,7 +284,10 @@ export function PharmaciesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={openCreate}>Ajouter</Button>
+            <Button onClick={openCreate} className="rounded-xl">
+              <Plus className="h-4 w-4" />
+              Ajouter
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -284,11 +297,17 @@ export function PharmaciesPage() {
             </p>
           ) : null}
           {loading ? (
-            <p className="text-sm text-muted-foreground">Chargement…</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+              Chargement…
+            </div>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune pharmacie.</p>
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 bg-muted/30 py-12 text-center">
+              <Inbox className="h-10 w-10 text-muted-foreground/70" strokeWidth={1.5} aria-hidden />
+              <p className="text-sm text-muted-foreground">Aucune pharmacie.</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div className="overflow-x-auto rounded-2xl border border-border/80">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -311,7 +330,8 @@ export function PharmaciesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
+                        <Button variant="outline" size="sm" className="rounded-xl" onClick={() => openEdit(r)}>
+                          <Pencil className="h-3.5 w-3.5" />
                           Modifier
                         </Button>
                       </TableCell>

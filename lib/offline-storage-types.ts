@@ -5,6 +5,8 @@ export type CachedPharmacyPayload = {
   name: string;
   address: string;
   commune: string;
+  /** Absent dans les caches créés avant l’alignement admin → app */
+  city?: string;
   latitude: number;
   longitude: number;
   phone_primary: string;
@@ -16,6 +18,15 @@ export type CachedPharmacyPayload = {
   rating: number;
   review_count: number;
 };
+
+/** Normalise le JSON cache (rétro-compat sans `city`). */
+export function parseCachedPharmacyPayload(json: string): CachedPharmacyPayload {
+  const p = JSON.parse(json) as CachedPharmacyPayload;
+  return {
+    ...p,
+    city: typeof p.city === 'string' ? p.city : '',
+  };
+}
 
 export type GardeCacheRow = {
   pharmacy_id: string;

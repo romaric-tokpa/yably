@@ -282,6 +282,7 @@ export interface Database {
           name: string;
           address: string;
           commune: string;
+          city: string;
           latitude: string;
           longitude: string;
           phone_primary: string;

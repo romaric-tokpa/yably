@@ -52,6 +52,15 @@ export const PharmacyCard = memo(function PharmacyCard({
           >
             {pharmacy.address}
           </Text>
+          {pharmacy.commune.length > 0 || pharmacy.city.length > 0 ? (
+            <Text
+              className="mt-0.5 text-[10px] leading-4"
+              style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
+              numberOfLines={1}
+            >
+              {[pharmacy.commune, pharmacy.city].filter((s) => s.length > 0).join(' · ')}
+            </Text>
+          ) : null}
         </View>
         <View className="items-end">
           <Text style={{ fontFamily: fonts.outfitExtraBold, color: t.accent }}>

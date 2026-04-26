@@ -86,6 +86,7 @@ export async function fetchPharmacyDeGardeById(
     name: p.name,
     address: p.address,
     commune: p.commune,
+    city: p.city,
     latitude: lat,
     longitude: lng,
     phone_primary: p.phone_primary,

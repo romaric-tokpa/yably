@@ -1,4 +1,5 @@
 import L from 'leaflet';
+import { MapPin } from 'lucide-react';
 import { useEffect } from 'react';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 
@@ -67,8 +68,9 @@ export function MapPicker({
         <Marker position={[latitude, longitude]} />
         <MapClickHandler onPick={onPositionChange} />
       </MapContainer>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Cliquez sur la carte pour placer le repère GPS.
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
+        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
+        <span>Cliquez sur la carte pour placer le repère GPS.</span>
       </p>
     </div>
   );

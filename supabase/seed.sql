@@ -229,7 +229,8 @@ VALUES (
   'authenticated',
   'authenticated',
   'seed.contrib@pharmacie-garde.local',
-  extensions.crypt('seed-dev-not-for-prod', extensions.gen_salt('bf')),
+  -- Même contrainte que l’admin : GoTrue (Go) vérifie le bcrypt ; crypt() PostgreSQL peut produire un hash refusé.
+  '$2b$10$Ckqp/w8GeDymEaVSUObac.P6geWQIzieLmUlr1yPClmBmpbU8Ne0K',
   now(),
   '+2250712345678',
   now(),
@@ -242,12 +243,44 @@ VALUES (
   '',
   '',
   '',
-  jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
+  jsonb_build_object(
+    'provider',
+    'email',
+    'providers',
+    jsonb_build_array('email', 'phone')
+  ),
   '{}'::jsonb,
   now(),
   now(),
   false,
   false
+);
+
+-- Identité téléphone : obligatoire pour que GoTrue accepte signInWithPassword({ phone }) (app Expo).
+-- Téléphone en E.164 : +2250712345678 ; mot de passe : seed-dev-not-for-prod
+INSERT INTO auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+)
+VALUES (
+  'c0000000-0000-4000-8000-000000000001'::uuid,
+  'b0000000-0000-4000-8000-000000000001'::uuid,
+  jsonb_build_object(
+    'sub', 'b0000000-0000-4000-8000-000000000001',
+    'phone', '+2250712345678',
+    'phone_verified', true
+  ),
+  'phone',
+  '+2250712345678',
+  now(),
+  now(),
+  now()
 );
 
 -- ---------------------------------------------------------------------------

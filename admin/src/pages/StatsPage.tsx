@@ -1,5 +1,6 @@
 import { format, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { BarChart3, Inbox, Loader2, Percent, UserCheck, Users } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bar,
@@ -11,6 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import { AdminPageHeader } from '@/components/AdminPageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -115,11 +117,13 @@ export function StatsPage() {
   }, [verifRate]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Statistiques</h1>
-        <p className="text-sm text-muted-foreground">A-04 — Agrégats Supabase (14–30 j.).</p>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        icon={BarChart3}
+        title="Statistiques"
+        code="A-04"
+        description="Agrégats Supabase (14–30 j.)."
+      />
 
       {error !== null ? (
         <p className="text-sm text-destructive" role="alert">
@@ -128,28 +132,41 @@ export function StatsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Chargement…</p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+          Chargement…
+        </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Utilisateurs (profils)
-                </CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Utilisateurs (profils)
+                  </CardTitle>
+                  <div className="rounded-xl bg-primary/10 p-2 text-primary" aria-hidden>
+                    <Users className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{totalUsers ?? '—'}</p>
+                <p className="text-3xl font-bold tabular-nums">{totalUsers ?? '—'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Actifs (30 j.)
-                </CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Actifs (30 j.)
+                  </CardTitle>
+                  <div className="rounded-xl bg-primary/10 p-2 text-primary" aria-hidden>
+                    <UserCheck className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{activeUsers ?? '—'}</p>
+                <p className="text-3xl font-bold tabular-nums">{activeUsers ?? '—'}</p>
                 <p className="text-xs text-muted-foreground">
                   Ayant au moins une vérification sur la période
                 </p>
@@ -157,12 +174,17 @@ export function StatsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Taux vérif. / vues
-                </CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Taux vérif. / vues
+                  </CardTitle>
+                  <div className="rounded-xl bg-primary/10 p-2 text-primary" aria-hidden>
+                    <Percent className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{rateLabel}</p>
+                <p className="text-3xl font-bold tabular-nums">{rateLabel}</p>
                 <p className="text-xs text-muted-foreground">
                   Σ verifications_received / Σ views (pharmacy_stats)
                 </p>
@@ -172,12 +194,18 @@ export function StatsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recherches par jour (vues fiches)</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2} aria-hidden />
+                Recherches par jour (vues fiches)
+              </CardTitle>
               <p className="text-sm text-muted-foreground">14 derniers jours</p>
             </CardHeader>
             <CardContent className="h-[320px]">
               {chartData.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Pas de données pharmacy_stats.</p>
+                <div className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 bg-muted/20">
+                  <Inbox className="h-8 w-8 text-muted-foreground/70" strokeWidth={1.5} aria-hidden />
+                  <p className="text-sm text-muted-foreground">Pas de données pharmacy_stats.</p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -185,7 +213,11 @@ export function StatsPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                     <Tooltip />
-                    <Bar dataKey="recherches" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="recherches"
+                      fill="#0D7C5F"
+                      radius={[6, 6, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}

@@ -8,9 +8,10 @@ import {
   toLocalISODate,
 } from '@/lib/gardeSchedule';
 import { haversineDistanceKm } from '@/lib/distance';
-import type {
-  CachedPharmacyPayload,
-  GardeCacheRow,
+import {
+  parseCachedPharmacyPayload,
+  type CachedPharmacyPayload,
+  type GardeCacheRow,
 } from '@/lib/offline-storage-types';
 import type { PharmacyDeGarde } from '@/types/pharmacy';
 
@@ -155,6 +156,7 @@ function toPayload(p: PharmacyDeGarde): CachedPharmacyPayload {
     name: p.name,
     address: p.address,
     commune: p.commune,
+    city: p.city,
     latitude: p.latitude,
     longitude: p.longitude,
     phone_primary: p.phone_primary,
@@ -350,7 +352,7 @@ export async function loadPharmacies(
     for (const row of pharmRows) {
       const g = gardeByPh.get(row.id);
       if (g === undefined) continue;
-      const payload = JSON.parse(row.payload) as CachedPharmacyPayload;
+      const payload = parseCachedPharmacyPayload(row.payload);
       const dist = haversineDistanceKm(
         userLat,
         userLng,

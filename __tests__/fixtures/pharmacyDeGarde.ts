@@ -8,6 +8,7 @@ export function makePharmacy(
     name: 'Pharmacie Test',
     address: '12 rue des Lilas, Cocody',
     commune: 'Cocody',
+    city: 'Abidjan',
     latitude: 5.36,
     longitude: -4.008,
     phone_primary: '+2250708091011',

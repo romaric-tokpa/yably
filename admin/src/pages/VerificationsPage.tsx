@@ -1,8 +1,9 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Trash2 } from 'lucide-react';
+import { Inbox, Loader2, MapPinOff, ShieldCheck, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { AdminPageHeader } from '@/components/AdminPageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -97,13 +98,13 @@ export function VerificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Vérifications</h1>
-        <p className="text-sm text-muted-foreground">
-          A-03 — Contrôle communautaire ; suppression des entrées suspectes.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        icon={ShieldCheck}
+        title="Vérifications"
+        code="A-03"
+        description="Contrôle communautaire ; suppression des entrées suspectes."
+      />
 
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -141,11 +142,17 @@ export function VerificationsPage() {
             </p>
           ) : null}
           {loading ? (
-            <p className="text-sm text-muted-foreground">Chargement…</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+              Chargement…
+            </div>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune vérification.</p>
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 bg-muted/30 py-12 text-center">
+              <Inbox className="h-10 w-10 text-muted-foreground/70" strokeWidth={1.5} aria-hidden />
+              <p className="text-sm text-muted-foreground">Aucune vérification.</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div className="overflow-x-auto rounded-2xl border border-border/80">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -169,13 +176,21 @@ export function VerificationsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {r.distance_to_pharmacy !== null ? String(r.distance_to_pharmacy) : '—'}
+                        {r.distance_to_pharmacy !== null ? (
+                          String(r.distance_to_pharmacy)
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
+                            <MapPinOff className="h-3.5 w-3.5" aria-hidden />
+                            N/A
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="rounded-xl"
                           disabled={deletingId === r.id}
                           onClick={() => void removeRow(r.id)}
                         >

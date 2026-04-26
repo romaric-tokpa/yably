@@ -1,10 +1,6 @@
-import {
-  Camera,
-  MapView,
-  MarkerView,
-} from '@maplibre/maplibre-react-native';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
+import MapView, { Marker, type Region } from 'react-native-maps';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -20,7 +16,6 @@ import { YablyLogo } from '@/components/common/yablyLogo';
 import type { ThemeColors } from '@/lib/constants';
 import { haversineDistanceMeters } from '@/lib/distance';
 import { formatDistance } from '@/lib/format';
-import { buildRasterMapStyle } from '@/lib/maplibre-style';
 import {
   getPharmacyVerificationTone,
   type PharmacyVerificationTone,
@@ -31,13 +26,18 @@ import type { PharmacyMapProps } from './pharmacy-map-props';
 
 export type { PharmacyMapProps } from './pharmacy-map-props';
 
-const ABIDJAN_CENTER: [number, number] = [-4.008, 5.36];
-const DEFAULT_ZOOM = 11;
+/** Expo Go : react-native-maps (Apple/Google selon plateforme). MapLibre = dev build uniquement. */
+const ABIDJAN_REGION: Region = {
+  latitude: 5.36,
+  longitude: -4.008,
+  latitudeDelta: 0.12,
+  longitudeDelta: 0.12,
+};
 
 const MAP_MARGIN_M = 2000;
 const USER_MARKER_BLUE = '#3B82F6';
 
-const FIT_PADDING: [number, number, number, number] = [88, 52, 128, 52];
+const FIT_PADDING = { top: 88, right: 52, bottom: 128, left: 52 };
 
 function markerHex(tone: PharmacyVerificationTone, pal: ThemeColors): string {
   switch (tone) {
@@ -55,21 +55,58 @@ function nearestPharmacy(list: PharmacyDeGarde[]): PharmacyDeGarde | null {
   return list.reduce((a, b) => (a.distance_km <= b.distance_km ? a : b));
 }
 
-function computeInitialCenter(
+function computeInitialRegion(
   userLocation: { latitude: number; longitude: number } | null,
   pharmacies: PharmacyDeGarde[],
-): [number, number] {
+): Region {
   if (pharmacies.length === 0) {
-    return userLocation !== null
-      ? [userLocation.longitude, userLocation.latitude]
-      : ABIDJAN_CENTER;
+    if (userLocation !== null) {
+      const d = (MAP_MARGIN_M * 2.5) / 111_320;
+      return {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: Math.max(d, 0.025),
+        longitudeDelta: Math.max(
+          d / Math.cos((userLocation.latitude * Math.PI) / 180),
+          0.025,
+        ),
+      };
+    }
+    return ABIDJAN_REGION;
   }
+
   const closest = nearestPharmacy(pharmacies);
-  if (closest === null) return ABIDJAN_CENTER;
+  if (closest === null) return ABIDJAN_REGION;
+
+  const center =
+    userLocation !== null
+      ? userLocation
+      : { latitude: closest.latitude, longitude: closest.longitude };
+
+  let radiusM = MAP_MARGIN_M;
   if (userLocation !== null) {
-    return [userLocation.longitude, userLocation.latitude];
+    const dM = haversineDistanceMeters(
+      userLocation.latitude,
+      userLocation.longitude,
+      closest.latitude,
+      closest.longitude,
+    );
+    radiusM = dM + MAP_MARGIN_M;
+  } else {
+    radiusM = Math.max(closest.distance_km * 1000, 150) + MAP_MARGIN_M;
   }
-  return [closest.longitude, closest.latitude];
+
+  const diameterM = Math.max(radiusM * 2, 4_000);
+  const latDelta = Math.max(diameterM / 111_320, 0.012);
+  const cosLat = Math.cos((center.latitude * Math.PI) / 180);
+  const lngDelta = Math.max(latDelta / Math.max(cosLat, 0.25), 0.012);
+
+  return {
+    latitude: center.latitude,
+    longitude: center.longitude,
+    latitudeDelta: latDelta,
+    longitudeDelta: lngDelta,
+  };
 }
 
 function badgeLabel(tone: PharmacyVerificationTone): string {
@@ -174,12 +211,19 @@ function PharmacyMarkerOnMap({ pharmacy, pal, onVoirDetails }: PharmacyMarkerOnM
   const isPulse = tone === 'verified';
 
   return (
-    <MarkerView
-      coordinate={[pharmacy.longitude, pharmacy.latitude]}
+    <Marker
+      coordinate={{ latitude: pharmacy.latitude, longitude: pharmacy.longitude }}
       anchor={{ x: 0.5, y: 1 }}
+      tracksViewChanges={Platform.OS === 'android'}
+      onPress={onVoirDetails}
     >
       <View className="items-center" style={{ width: TEARDROP + 8 }}>
-        <Pressable accessibilityRole="button" onPress={onVoirDetails} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Ouvrir ${pharmacy.name}`}
+          onPress={onVoirDetails}
+          hitSlop={8}
+        >
           <PharmacyMapMarkerPin color={color} pulse={isPulse} />
         </Pressable>
         <View
@@ -214,7 +258,7 @@ function PharmacyMarkerOnMap({ pharmacy, pal, onVoirDetails }: PharmacyMarkerOnM
           </View>
         </View>
       </View>
-    </MarkerView>
+    </Marker>
   );
 }
 
@@ -238,7 +282,8 @@ function LegendItem({
 }
 
 /**
- * Carte MapLibre + tuiles OSM / MapTiler (sans facturation Google Maps sur la tuile).
+ * Carte interactive — react-native-maps (compatible Expo Go).
+ * Pour MapLibre + tuiles MapTiler personnalisées, utiliser un development build.
  */
 export function PharmacyMap({
   pharmacies,
@@ -246,38 +291,30 @@ export function PharmacyMap({
   onMarkerPress,
 }: PharmacyMapProps) {
   const { theme: pal } = useAppTheme();
+  const mapRef = useRef<MapView | null>(null);
 
-  const maptilerKey =
-    typeof process.env.EXPO_PUBLIC_MAPTILER_API_KEY === 'string'
-      ? process.env.EXPO_PUBLIC_MAPTILER_API_KEY
-      : undefined;
-  const mapStyle = useMemo(() => buildRasterMapStyle(maptilerKey), [maptilerKey]);
-
-  const initialCenter = useMemo(
-    () => computeInitialCenter(userLocation, pharmacies),
+  const initialRegion = useMemo(
+    () => computeInitialRegion(userLocation, pharmacies),
     [userLocation, pharmacies],
   );
 
-  const cameraRef = useRef<React.ElementRef<typeof Camera>>(null);
   const pharmaciesRef = useRef(pharmacies);
   const userRef = useRef(userLocation);
   pharmaciesRef.current = pharmacies;
   userRef.current = userLocation;
 
   const fitMapToMarkers = useCallback(() => {
-    const cam = cameraRef.current;
-    if (cam === null) {
-      return;
-    }
+    const map = mapRef.current;
+    if (map === null) return;
 
-    const coords: [number, number][] = [];
+    const coords: { latitude: number; longitude: number }[] = [];
     const ul = userRef.current;
     const list = pharmaciesRef.current;
     if (ul !== null) {
-      coords.push([ul.longitude, ul.latitude]);
+      coords.push({ latitude: ul.latitude, longitude: ul.longitude });
     }
     for (const p of list) {
-      coords.push([p.longitude, p.latitude]);
+      coords.push({ latitude: p.latitude, longitude: p.longitude });
     }
 
     if (coords.length === 0) {
@@ -285,48 +322,21 @@ export function PharmacyMap({
     }
 
     if (coords.length === 1) {
-      const c = coords[0] ?? ABIDJAN_CENTER;
-      cam.moveTo(c, 300);
-      void cam.zoomTo(14, 300);
+      const c = coords[0]!;
+      map.animateToRegion({
+        latitude: c.latitude,
+        longitude: c.longitude,
+        latitudeDelta: 0.045,
+        longitudeDelta:
+          0.045 / Math.cos((c.latitude * Math.PI) / 180),
+      });
       return;
     }
 
-    let minLat = Infinity;
-    let maxLat = -Infinity;
-    let minLng = Infinity;
-    let maxLng = -Infinity;
-    for (const [lng, lat] of coords) {
-      minLat = Math.min(minLat, lat);
-      maxLat = Math.max(maxLat, lat);
-      minLng = Math.min(minLng, lng);
-      maxLng = Math.max(maxLng, lng);
-    }
-
-    const ne: [number, number] = [maxLng, maxLat];
-    const sw: [number, number] = [minLng, minLat];
-
-    if (ul !== null && list.length > 0) {
-      const closest = nearestPharmacy(list);
-      if (closest !== null) {
-        const radiusM =
-          haversineDistanceMeters(
-            ul.latitude,
-            ul.longitude,
-            closest.latitude,
-            closest.longitude,
-          ) + MAP_MARGIN_M;
-        const padM = Math.max(radiusM * 0.05, 800);
-        const dLat = padM / 111_320;
-        const cosLat = Math.cos((ul.latitude * Math.PI) / 180);
-        const dLng = padM / (111_320 * Math.max(cosLat, 0.25));
-        const nne: [number, number] = [maxLng + dLng, maxLat + dLat];
-        const ssw: [number, number] = [minLng - dLng, minLat - dLat];
-        cam.fitBounds(nne, ssw, FIT_PADDING, 400);
-        return;
-      }
-    }
-
-    cam.fitBounds(ne, sw, FIT_PADDING, 400);
+    map.fitToCoordinates(coords, {
+      edgePadding: FIT_PADDING,
+      animated: true,
+    });
   }, []);
 
   useEffect(() => {
@@ -339,33 +349,30 @@ export function PharmacyMap({
   return (
     <View className="min-h-[320px] flex-1 overflow-hidden">
       <MapView
+        ref={mapRef}
         style={{ flex: 1 }}
-        mapStyle={mapStyle}
-        logoEnabled={false}
-        attributionEnabled
-        contentInset={[8, 0, 104, 0]}
-        onDidFinishLoadingMap={() => {
+        initialRegion={initialRegion}
+        mapType="standard"
+        onMapReady={() => {
           fitMapToMarkers();
         }}
+        showsUserLocation={false}
+        showsMyLocationButton={false}
       >
-        <Camera
-          ref={cameraRef}
-          defaultSettings={{
-            centerCoordinate: initialCenter,
-            zoomLevel: DEFAULT_ZOOM,
-          }}
-        />
-
         {userLocation !== null ? (
-          <MarkerView
-            coordinate={[userLocation.longitude, userLocation.latitude]}
+          <Marker
+            coordinate={{
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+            }}
             anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={Platform.OS === 'android'}
           >
             <View
               className="h-6 w-6 rounded-full border-[3px] border-white"
               style={{ backgroundColor: USER_MARKER_BLUE }}
             />
-          </MarkerView>
+          </Marker>
         ) : null}
 
         {pharmacies.map((p) => (

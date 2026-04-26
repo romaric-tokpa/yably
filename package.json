@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "start:ios": "expo start --localhost",
+    "start:ios:open": "expo start --localhost -i",
     "start:localhost": "expo start --localhost",
     "start:clear": "expo start --clear",
     "start:tunnel": "expo start --tunnel",
@@ -14,8 +16,10 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
+    "db:containers-rm": "docker ps -aq --filter label=com.supabase.cli.project=pharmacie-garde | xargs -n1 docker rm -f 2>/dev/null || true",
     "db:start": "supabase start --ignore-health-check",
     "db:start:strict": "supabase start",
+    "db:start:clean": "npm run db:containers-rm && npm run db:start",
     "db:restart": "supabase stop && supabase start --ignore-health-check",
     "db:stop": "supabase stop",
     "db:reset": "bash scripts/db-reset.sh"
@@ -51,6 +55,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-maps": "1.20.1",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
