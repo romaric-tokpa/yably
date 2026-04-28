@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
+import { Check, Trophy, AlertCircle, ThumbsUp } from 'lucide-react-native';
 
 import { useAppTheme } from '@/components/common/appThemeContext';
 import { borderRadius as radii } from '@/lib/constants';
@@ -98,10 +99,10 @@ export function VerificationButton({
         style,
       ]}
     >
-      <View className="min-h-[52px] flex-row flex-wrap items-center justify-center gap-2">
+      <View className="min-h-[52px] flex-row flex-wrap items-center justify-center gap-2.5">
         {disabled ? (
           <Text
-            className="text-center text-[15px] font-semibold"
+            className="text-center text-[14px] leading-5"
             style={{ color: t.textSoft }}
           >
             {disabledLabel}
@@ -115,47 +116,54 @@ export function VerificationButton({
               className="text-[15px] font-semibold"
               style={{ color: onPrimaryLabel }}
             >
-              Envoi…
+              Envoi en cours…
             </Text>
           </>
         ) : null}
 
         {!disabled && phase === 'success' ? (
-          <Animated.View entering={ZoomIn.duration(480).springify()}>
+          <Animated.View entering={ZoomIn.duration(480).springify()} className="flex-row items-center justify-center gap-2">
+            <Trophy size={20} color={onPrimaryLabel} />
             <Text
               className="text-center text-[16px] font-bold"
               style={{ color: onPrimaryLabel }}
             >
-              🎉 +5 points !
+              +5 points !
             </Text>
           </Animated.View>
         ) : null}
 
         {!disabled && phase === 'error' ? (
-          <View className="items-center">
-            <Text
-              className="text-center text-[15px] font-semibold"
-              style={{ color: onPrimaryLabel }}
-            >
-              Réessayer — tap pour relancer
-            </Text>
-            <Text
-              className="mt-1 text-center text-[14px] font-medium"
-              style={{ color: 'rgba(255,255,255,0.92)' }}
-              numberOfLines={3}
-            >
-              {errorMessage}
-            </Text>
+          <View className="items-center flex-row gap-2">
+            <AlertCircle size={20} color={onPrimaryLabel} />
+            <View>
+              <Text
+                className="text-center text-[15px] font-semibold"
+                style={{ color: onPrimaryLabel }}
+              >
+                Réessayer (toucher)
+              </Text>
+              <Text
+                className="mt-0.5 text-center text-[13px] font-medium"
+                style={{ color: 'rgba(255,255,255,0.85)' }}
+                numberOfLines={2}
+              >
+                {errorMessage}
+              </Text>
+            </View>
           </View>
         ) : null}
 
         {!disabled && phase === 'idle' ? (
-          <Text
-            className="text-center text-[16px] font-bold"
-            style={{ color: onPrimaryLabel }}
-          >
-            ✅ Confirmer que c&apos;est ouvert
-          </Text>
+          <View className="flex-row items-center justify-center gap-2">
+            <ThumbsUp size={18} color={onPrimaryLabel} />
+            <Text
+              className="text-center text-[16px] font-bold"
+              style={{ color: onPrimaryLabel }}
+            >
+              Confirmer l'ouverture
+            </Text>
+          </View>
         ) : null}
       </View>
     </Pressable>

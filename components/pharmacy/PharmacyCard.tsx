@@ -1,4 +1,4 @@
-import { Clock, Star } from 'lucide-react-native';
+import { ChevronRight, Clock, MapPin, Star } from 'lucide-react-native';
 import { memo } from 'react';
 import { Text, View } from 'react-native';
 
@@ -35,46 +35,93 @@ export const PharmacyCard = memo(function PharmacyCard({
   const { value: distVal, unit: distUnit } = distanceParts(pharmacy.distance_km);
 
   const cardInner = (
-    <View style={{ padding: 14, gap: 0 }}>
-      <View className="mb-2 flex-row items-start justify-between gap-2">
-        <View className="min-w-0 flex-1 pr-1">
+    <View style={{ padding: 16, gap: 12 }}>
+      {/* En-tête : Nom et Distance */}
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
           <Text
-            className="text-[14px] font-bold leading-5"
-            style={{ color: t.text, fontFamily: fonts.outfitBold }}
+            className="text-[16px] leading-6 tracking-tight"
+            style={{ color: t.text, fontFamily: fonts.outfitBold, fontWeight: '800' }}
             numberOfLines={2}
           >
             {pharmacy.name}
           </Text>
-          <Text
-            className="mt-0.5 text-[11px] leading-4"
-            style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
-            numberOfLines={2}
-          >
-            {pharmacy.address}
-          </Text>
-          {pharmacy.commune.length > 0 || pharmacy.city.length > 0 ? (
-            <Text
-              className="mt-0.5 text-[10px] leading-4"
-              style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
-              numberOfLines={1}
-            >
-              {[pharmacy.commune, pharmacy.city].filter((s) => s.length > 0).join(' · ')}
-            </Text>
-          ) : null}
         </View>
-        <View className="items-end">
+        <View 
+          className="items-center justify-center rounded-[12px] px-2.5 py-1" 
+          style={{ backgroundColor: t.accentMuted }}
+        >
           <Text style={{ fontFamily: fonts.outfitExtraBold, color: t.accent }}>
-            <Text className="text-[20px] leading-6">{distVal}</Text>
+            <Text className="text-[18px]">{distVal}</Text>
             <Text
-              className="text-[11px] font-semibold"
+              className="text-[11px]"
               style={{ color: t.accent, fontFamily: fonts.outfitSemiBold }}
             >
               {' '}
               {distUnit}
             </Text>
           </Text>
-          <View className="mt-0.5 flex-row items-center gap-0.5">
-            <Clock size={11} color={t.textMuted} strokeWidth={2} />
+        </View>
+      </View>
+
+      {/* Adresse et badges */}
+      <View className="gap-3">
+        <View className="flex-row items-start gap-2 pr-2">
+          <MapPin size={15} color={t.textMuted} style={{ marginTop: 1 }} />
+          <View className="flex-1">
+            <Text
+              className="text-[13px] leading-5"
+              style={{ color: t.textSoft, fontFamily: fonts.outfitMedium }}
+              numberOfLines={2}
+            >
+              {pharmacy.address}
+            </Text>
+            {pharmacy.commune.length > 0 || pharmacy.city.length > 0 ? (
+              <Text
+                className="mt-0.5 text-[11.5px]"
+                style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
+                numberOfLines={1}
+              >
+                {[pharmacy.commune, pharmacy.city].filter((s) => s.length > 0).join(' · ')}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        <View className="flex-row flex-wrap gap-2.5">
+          <WaitTimeChip minutes={pharmacy.avg_wait_time} dense />
+          <VerifiedBadge
+            verificationCount={pharmacy.verification_count}
+            lastVerification={pharmacy.last_verification}
+            lastStatus={pharmacy.last_verification_status}
+            variant="compact"
+          />
+        </View>
+      </View>
+
+      {/* Pied de carte : Notes, Temps de trajet et Assurances */}
+      <View
+        className="mt-1 flex-row items-center justify-between border-t pt-3"
+        style={{ borderTopColor: t.border }}
+      >
+        <View className="flex-row items-center gap-3.5">
+          <View className="flex-row items-center gap-1">
+            <Star size={14} color="#F59E0B" fill="#F59E0B" strokeWidth={0} />
+            <Text
+              className="text-[13px] tabular-nums"
+              style={{ color: t.text, fontFamily: fonts.outfitBold }}
+            >
+              {pharmacy.rating.toFixed(1)}
+            </Text>
+            <Text
+              className="text-[11px] tabular-nums"
+              style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
+            >
+              ({pharmacy.review_count})
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-1.5">
+            <Clock size={12} color={t.textMuted} strokeWidth={2} />
             <Text
               className="text-[11px] tabular-nums"
               style={{ color: t.textMuted, fontFamily: fonts.outfitMedium }}
@@ -83,50 +130,20 @@ export const PharmacyCard = memo(function PharmacyCard({
             </Text>
           </View>
         </View>
-      </View>
 
-      <View className="mb-2.5 flex-row flex-wrap gap-1.5">
-        <VerifiedBadge
-          verificationCount={pharmacy.verification_count}
-          lastVerification={pharmacy.last_verification}
-          lastStatus={pharmacy.last_verification_status}
-          variant="compact"
-        />
-        <WaitTimeChip minutes={pharmacy.avg_wait_time} dense />
-      </View>
-
-      <View
-        className="flex-row items-center justify-between border-t pt-2"
-        style={{ borderTopColor: t.border }}
-      >
-        <View className="flex-row items-center gap-0.5">
-          <Star size={13} color={t.accent} fill={t.accent} strokeWidth={0} />
-          <Text
-            className="text-xs font-bold tabular-nums"
-            style={{ color: t.text, fontFamily: fonts.outfitBold }}
-          >
-            {pharmacy.rating.toFixed(1)}
-          </Text>
-          <Text
-            className="text-[11px] tabular-nums"
-            style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
-          >
-            ({pharmacy.review_count})
-          </Text>
-        </View>
-        <View className="max-w-[55%] flex-row flex-wrap items-center justify-end gap-1">
+        <View className="flex-row flex-wrap items-center justify-end gap-1.5 max-w-[45%]">
           {shown.map((code) => (
             <View
               key={code}
-              className="border px-1.5 py-0.5"
+              className="border px-2 py-0.5"
               style={{
                 borderColor: t.border,
                 backgroundColor: t.surfaceAlt,
-                borderRadius: 6,
+                borderRadius: 8,
               }}
             >
               <Text
-                className="text-[9px] font-semibold"
+                className="text-[10px]"
                 style={{ color: t.textSoft, fontFamily: fonts.outfitSemiBold }}
                 numberOfLines={1}
               >
@@ -139,11 +156,11 @@ export const PharmacyCard = memo(function PharmacyCard({
               className="px-1.5 py-0.5"
               style={{
                 backgroundColor: t.accentMuted,
-                borderRadius: 6,
+                borderRadius: 8,
               }}
             >
               <Text
-                className="text-[9px] font-bold"
+                className="text-[10px]"
                 style={{ color: t.accent, fontFamily: fonts.outfitBold }}
               >
                 +{extra}
@@ -168,8 +185,17 @@ export const PharmacyCard = memo(function PharmacyCard({
         borderRadius: radii.card,
         padding: 0,
         overflow: 'hidden',
+        // Ombre légèrement plus prononcée pour un effet premium
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
       }}
     >
+      <View className="absolute right-3 top-1/2 -translate-y-1/2 opacity-10">
+        <ChevronRight size={20} color={t.text} />
+      </View>
       {cardInner}
     </Card>
   );

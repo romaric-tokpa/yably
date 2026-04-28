@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ExpoLinking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import {
   ChevronLeft,
@@ -10,6 +11,11 @@ import {
   Share2,
   User,
   Waypoints,
+  MapPin,
+  Star,
+  Navigation,
+  Check,
+  Trophy,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -121,10 +127,20 @@ function PharmacyDetailScreenInner() {
     }
   }, [p]);
 
-  const openCall = useCallback(() => {
+  const openCall = useCallback(async () => {
     if (p === null) return;
     track('call_button_tapped', { pharmacy_id: p.id });
-    void Linking.openURL(telHref(p.phone_primary));
+    try {
+      const url = telHref(p.phone_primary);
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Appel non supporté', "Cet appareil ne peut pas passer d'appels téléphoniques.");
+      }
+    } catch (e) {
+      Alert.alert('Erreur', "Impossible de lancer l'appel.");
+    }
   }, [p]);
 
   const openDirections = useCallback(
@@ -244,13 +260,15 @@ function PharmacyDetailScreenInner() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
-        {/* Header specs §4.4 */}
+      <View className="flex-1" style={{ backgroundColor: t.bg }}>
+        {/* Header plat et épuré */}
         <View
           className="flex-row items-center justify-between px-4 pb-3 pt-2"
           style={{
             paddingTop: insets.top + 4,
             backgroundColor: t.bg,
+            borderBottomWidth: 1,
+            borderBottomColor: t.border,
           }}
         >
           <Pressable
@@ -258,26 +276,24 @@ function PharmacyDetailScreenInner() {
             accessibilityLabel="Retour"
             hitSlop={12}
             onPress={() => router.back()}
-            className="h-[38px] w-[38px] items-center justify-center rounded-xl border"
-            style={{ borderColor: t.border, backgroundColor: t.surface }}
+            className="h-[40px] w-[40px] items-center justify-center rounded-xl"
           >
-            <ChevronLeft size={22} color={t.text} strokeWidth={2} />
+            <ChevronLeft size={24} color={t.text} strokeWidth={2} />
           </Pressable>
           <Text
-            className="flex-1 text-center text-base font-bold"
+            className="flex-1 text-center text-[17px] font-bold"
             style={{ color: t.text, fontFamily: fonts.outfitBold }}
           >
-            Détails
+            Détails de la pharmacie
           </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Partager cette pharmacie"
             hitSlop={12}
             onPress={() => void sharePharmacy()}
-            className="h-[38px] w-[38px] items-center justify-center rounded-xl border"
-            style={{ borderColor: t.border, backgroundColor: t.surface }}
+            className="h-[40px] w-[40px] items-center justify-center rounded-xl"
           >
-            <Share2 size={18} color={t.textSoft} strokeWidth={2} />
+            <Share2 size={20} color={t.text} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -296,7 +312,7 @@ function PharmacyDetailScreenInner() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Réessayer de charger la pharmacie"
-              className="mt-4 rounded-[14px] px-5 py-3"
+              className="mt-4 rounded-xl px-5 py-3"
               style={{ backgroundColor: t.primary }}
               onPress={() => void pharmacyQuery.refetch()}
             >
@@ -315,288 +331,290 @@ function PharmacyDetailScreenInner() {
           <>
             <ScrollView
               contentContainerStyle={{
+                paddingTop: 20,
                 paddingHorizontal: spacing.screenHorizontal,
-                paddingTop: 12,
-                paddingBottom: 120 + insets.bottom,
+                paddingBottom: 140 + insets.bottom,
               }}
               showsVerticalScrollIndicator={false}
             >
-              <Card style={{ padding: 18, borderRadius: 20 }}>
-                {p.photo_url !== null && p.photo_url.length > 0 ? (
-                  <Image
-                    source={{ uri: p.photo_url }}
-                    recyclingKey={p.id}
-                    style={{
-                      width: '100%',
-                      height: 200,
-                      borderRadius: radii.card,
-                      marginBottom: spacing.cardPadding,
-                    }}
-                    contentFit="cover"
-                    placeholderContentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={280}
-                    accessibilityLabel={`Photo de la pharmacie ${p.name}`}
-                    placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
-                  />
-                ) : null}
-                <View className="mb-3 flex-row items-start justify-between gap-3">
-                  <View className="min-w-0 flex-1">
+              {p.photo_url !== null && p.photo_url.length > 0 ? (
+                <Image
+                  source={{ uri: p.photo_url }}
+                  recyclingKey={p.id}
+                  style={{
+                    width: '100%',
+                    height: 200,
+                    borderRadius: 16,
+                    marginBottom: 16,
+                  }}
+                  contentFit="cover"
+                  placeholderContentFit="cover"
+                  cachePolicy="memory-disk"
+                  accessibilityLabel={`Photo de la pharmacie ${p.name}`}
+                  placeholder={{ blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I' }}
+                />
+              ) : null}
+
+              {/* Carte principale identique à PharmacyCard */}
+              <Card style={{ padding: 16, gap: 12 }}>
+                {/* En-tête : Nom et Distance */}
+                <View className="flex-row items-start justify-between gap-3">
+                  <View className="flex-1">
                     <Text
-                      className="text-lg font-extrabold"
-                      style={{ color: t.text, fontFamily: fonts.outfitExtraBold }}
+                      className="text-[18px] leading-6 tracking-tight"
+                      style={{ color: t.text, fontFamily: fonts.outfitBold, fontWeight: '800' }}
                     >
                       {p.name}
                     </Text>
-                    <Text
-                      className="mt-1 text-xs leading-5"
-                      style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
-                    >
-                      {p.address}
-                    </Text>
-                    {p.commune.length > 0 || p.city.length > 0 ? (
-                      <Text
-                        className="mt-0.5 text-[11px] leading-5"
-                        style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
-                      >
-                        {[p.commune, p.city].filter((s) => s.length > 0).join(' · ')}
-                      </Text>
-                    ) : null}
-                    {p.pharmacist_name !== null ? (
-                      <View className="mt-1.5 flex-row items-center gap-1.5">
-                        <User size={13} color={t.textMuted} strokeWidth={2} />
-                        <Text
-                          className="text-xs"
-                          style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
-                        >
-                          {p.pharmacist_name}
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
-                  <LinearGradient
-                    colors={[t.accent, t.accentGlow]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 16,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                  <View 
+                    className="items-center justify-center rounded-[12px] px-2.5 py-1" 
+                    style={{ backgroundColor: t.accentMuted }}
                   >
-                    <YablyLogo size={28} color="#FFFFFF" fillOpacity={0.25} strokeWidth={1.8} />
-                  </LinearGradient>
+                    <Text style={{ fontFamily: fonts.outfitExtraBold, color: t.accent }}>
+                      <Text className="text-[18px]">{formatDistance(p.distance_km).split(' ')[0]}</Text>
+                      <Text
+                        className="text-[11px]"
+                        style={{ color: t.accent, fontFamily: fonts.outfitSemiBold }}
+                      >
+                        {' '}
+                        {formatDistance(p.distance_km).split(' ')[1] ?? 'km'}
+                      </Text>
+                    </Text>
+                  </View>
                 </View>
 
-                <View className="mt-4 flex-row flex-wrap gap-2">
-                  {p.last_verification_status === 'closed' ? (
-                    <Badge label="Fermeture signalée" variant="danger" />
-                  ) : (
-                    <Badge label="Ouvert" variant="success" />
-                  )}
-                  <View className="max-w-[48%]">
+                {/* Adresse et badges */}
+                <View className="gap-3">
+                  <View className="flex-row items-start gap-2 pr-2">
+                    <MapPin size={15} color={t.textMuted} style={{ marginTop: 1 }} />
+                    <View className="flex-1">
+                      <Text
+                        className="text-[14px] leading-5"
+                        style={{ color: t.textSoft, fontFamily: fonts.outfitMedium }}
+                      >
+                        {p.address}
+                      </Text>
+                      {p.commune.length > 0 || p.city.length > 0 ? (
+                        <Text
+                          className="mt-0.5 text-[12px]"
+                          style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
+                        >
+                          {[p.commune, p.city].filter((s) => s.length > 0).join(' · ')}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <View className="flex-row flex-wrap gap-2.5">
+                    <WaitTimeChip minutes={p.avg_wait_time} dense />
                     <VerifiedBadge
                       verificationCount={p.verification_count}
                       lastVerification={p.last_verification}
                       lastStatus={p.last_verification_status}
+                      variant="compact"
                     />
+                    {p.last_verification_status === 'closed' ? (
+                      <Badge label="Fermeture signalée" variant="danger" />
+                    ) : (
+                      <Badge label="Ouvert" variant="success" />
+                    )}
                   </View>
-                  <WaitTimeChip minutes={p.avg_wait_time} />
                 </View>
 
-                <View className="mt-2 flex-row gap-2">
-                  {[
-                    { v: formatDistance(p.distance_km), l: 'Distance' },
-                    { v: formatDuration(p.duration_min), l: 'Trajet' },
-                    { v: `${p.rating.toFixed(1)}/5`, l: 'Note' },
-                  ].map((s) => (
-                    <View
-                      key={s.l}
-                      className="min-w-0 flex-1 items-center rounded-[14px] border py-3 px-1"
-                      style={{
-                        borderColor: t.border,
-                        backgroundColor: t.surfaceAlt,
-                      }}
-                    >
+                {/* Pied de carte : Notes, Temps de trajet et Assurances */}
+                <View
+                  className="mt-1 flex-row flex-wrap items-center justify-between border-t pt-3 gap-y-3"
+                  style={{ borderTopColor: t.border }}
+                >
+                  <View className="flex-row items-center gap-4">
+                    <View className="flex-row items-center gap-1">
+                      <Star size={16} color="#F59E0B" fill="#F59E0B" strokeWidth={0} />
                       <Text
-                        className="text-base font-extrabold tabular-nums"
-                        style={{ color: t.text, fontFamily: fonts.outfitExtraBold }}
+                        className="text-[14px] tabular-nums"
+                        style={{ color: t.text, fontFamily: fonts.outfitBold }}
                       >
-                        {s.v}
+                        {p.rating.toFixed(1)}
                       </Text>
                       <Text
-                        className="mt-0.5 text-[10px]"
-                        style={{ color: t.textMuted, fontFamily: fonts.outfitMedium }}
+                        className="text-[12px] tabular-nums"
+                        style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
                       >
-                        {s.l}
+                        ({p.review_count})
                       </Text>
                     </View>
-                  ))}
-                </View>
-
-                <View className="mt-4 flex-row items-start gap-2">
-                  <Clock size={20} color={t.accent} />
-                  <View className="flex-1">
-                    <Text className="text-[14px] font-semibold" style={{ color: t.text }}>
-                      Horaires de garde
-                    </Text>
-                    <Text className="mt-0.5 text-[14px] leading-5" style={{ color: t.textSoft }}>
-                      {horaireLabel}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text
-                  className="mt-4 text-xs font-bold"
-                  style={{ color: t.text, fontFamily: fonts.outfitBold }}
-                >
-                  Accepte
-                </Text>
-                <View className="mt-2 flex-row flex-wrap gap-1.5">
-                  {p.accepted_insurance.length === 0 ? (
-                    <Text style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}>—</Text>
-                  ) : (
-                    p.accepted_insurance.map((ins) => (
-                      <View
-                        key={ins}
-                        className="rounded-[10px] border px-3 py-1.5"
-                        style={{
-                          borderColor: t.accentMuted,
-                          backgroundColor: t.accentMuted,
-                        }}
+                    <View className="flex-row items-center gap-1.5">
+                      <Clock size={14} color={t.textMuted} strokeWidth={2} />
+                      <Text
+                        className="text-[13px] tabular-nums"
+                        style={{ color: t.textMuted, fontFamily: fonts.outfitMedium }}
                       >
-                        <Text
-                          className="text-[11px] font-semibold"
-                          style={{ color: t.accent, fontFamily: fonts.outfitSemiBold }}
+                        {formatDuration(p.duration_min)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row flex-wrap items-center justify-end gap-1.5 max-w-[50%]">
+                    {p.accepted_insurance.length === 0 ? (
+                      <Text style={{ color: t.textMuted, fontFamily: fonts.outfitRegular, fontSize: 11 }}>
+                        Non renseigné
+                      </Text>
+                    ) : (
+                      p.accepted_insurance.map((code) => (
+                        <View
+                          key={code}
+                          className="border px-2 py-0.5"
+                          style={{
+                            borderColor: t.border,
+                            backgroundColor: t.surfaceAlt,
+                            borderRadius: 8,
+                          }}
                         >
-                          {ins}
-                        </Text>
-                      </View>
-                    ))
-                  )}
+                          <Text
+                            className="text-[11px]"
+                            style={{ color: t.textSoft, fontFamily: fonts.outfitSemiBold }}
+                          >
+                            {code}
+                          </Text>
+                        </View>
+                      ))
+                    )}
+                  </View>
                 </View>
               </Card>
 
-              <View className="mt-3 rounded-[18px] border p-4" style={{ borderColor: t.border, backgroundColor: t.surface }}>
+              {/* Horaires */}
+              <View className="mt-6 mb-6 rounded-xl border p-4" style={{ borderColor: t.border, backgroundColor: t.surface }}>
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Clock size={18} color={t.text} />
+                  <Text className="text-[15px] font-bold" style={{ color: t.text, fontFamily: fonts.outfitBold }}>
+                    Horaires de garde
+                  </Text>
+                </View>
+                <Text className="text-[14px] leading-5" style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}>
+                  {horaireLabel}
+                </Text>
+              </View>
+
+              {/* Vérification communautaire - Minimaliste */}
+              <View 
+                className="mb-8 rounded-xl border p-5" 
+                style={{ borderColor: t.border, backgroundColor: t.surface }}
+              >
                 <Text
-                  className="text-[13px] font-bold"
+                  className="text-[15px] font-bold"
                   style={{ color: t.text, fontFamily: fonts.outfitBold }}
                 >
                   Vérification communautaire
                 </Text>
                 <Text
-                  className="mt-1 text-[11px] leading-5"
+                  className="mt-2 text-[14px] leading-5"
                   style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
                 >
                   {p.verification_count} personne{p.verification_count > 1 ? 's' : ''}{' '}
-                  {p.verification_count > 1 ? 'ont' : 'a'} confirmé l’ouverture récemment.
+                  {p.verification_count > 1 ? 'ont' : 'a'} confirmé l’ouverture récemment. Aidez les autres en confirmant.
                 </Text>
 
                 {!authLoading && !isAuthenticated ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Se connecter pour vérifier cette pharmacie"
-                    className="mt-4 overflow-hidden rounded-[14px]"
-                    style={{ borderWidth: 1, borderColor: t.primary }}
+                    accessibilityLabel="Se connecter pour vérifier"
+                    className="mt-5 rounded-lg py-3"
+                    style={{ backgroundColor: t.primary }}
                     onPress={() =>
                       router.push({
                         pathname: '/auth/login',
-                        params: {
-                          returnTo: `/pharmacy/${pharmacyId}`,
-                        },
+                        params: { returnTo: `/pharmacy/${pharmacyId}` },
                       })
                     }
                   >
-                    <LinearGradient
-                      colors={[t.primaryMuted, t.surface]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{ paddingVertical: 14, paddingHorizontal: 12 }}
+                    <Text
+                      className="text-center text-[15px] font-bold text-white"
+                      style={{ fontFamily: fonts.outfitBold }}
                     >
-                      <Text
-                        className="text-center text-[14px] font-bold"
-                        style={{ color: t.primary, fontFamily: fonts.outfitBold }}
-                      >
-                        Connectez-vous pour vérifier
-                      </Text>
-                    </LinearGradient>
+                      Se connecter pour vérifier
+                    </Text>
                   </Pressable>
                 ) : null}
 
                 {isAuthenticated && alreadyVerified ? (
                   <View
-                    className="mt-4 rounded-[14px] border px-4 py-4"
-                    style={{ borderColor: t.border, backgroundColor: t.surfaceAlt }}
+                    className="mt-5 flex-row items-center justify-center gap-2 rounded-lg border py-3"
+                    style={{ borderColor: t.border, backgroundColor: t.bg }}
                   >
-                    <Text className="text-center text-[15px] font-semibold" style={{ color: t.textSoft }}>
-                      Vous avez déjà vérifié cette pharmacie (moins de 2 h).
+                    <Check size={18} color={t.text} />
+                    <Text className="text-[14px] font-bold" style={{ color: t.text, fontFamily: fonts.outfitBold }}>
+                      Vous avez vérifié récemment
                     </Text>
                   </View>
                 ) : null}
 
                 {isAuthenticated && !alreadyVerified && lat === null ? (
-                  <Text className="mt-3 text-[14px] leading-5" style={{ color: t.textSoft }}>
-                    Activez la position pour savoir si vous pouvez vérifier.
+                  <Text className="mt-4 text-[13px]" style={{ color: t.textSoft }}>
+                    Activez la position pour vérifier.
                   </Text>
                 ) : null}
 
                 {isAuthenticated && !alreadyVerified && lat !== null && tooFar ? (
-                  <VerificationButton
-                    pharmacyId={p.id}
-                    onVerify={onVerifyPress}
-                    disabled
-                    disabledLabel={`Rapprochez-vous pour vérifier (vous êtes à ${distanceMeters ?? '?'} m, max 500 m).`}
-                  />
-                ) : null}
-
-                {isAuthenticated && !alreadyVerified && lat !== null && !tooFar ? (
                   <View className="mt-4">
                     <VerificationButton
                       pharmacyId={p.id}
                       onVerify={onVerifyPress}
+                      disabled
+                      disabledLabel={`Rapprochez-vous (${distanceMeters ?? '?'} m, max 500 m).`}
+                    />
+                  </View>
+                ) : null}
+
+                {isAuthenticated && !alreadyVerified && lat !== null && !tooFar ? (
+                  <View className="mt-5">
+                    <VerificationButton
+                      pharmacyId={p.id}
+                      onVerify={onVerifyPress}
                       disabled={networkOffline}
-                      disabledLabel="Connexion Internet requise pour vérifier."
+                      disabledLabel="Connexion Internet requise."
                     />
                   </View>
                 ) : null}
               </View>
             </ScrollView>
 
-            {/* Bottom bar fixe — design Yably */}
+            {/* Bottom bar plat */}
             <View
               style={{
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
                 right: 0,
-                paddingHorizontal: spacing.screenHorizontal,
-                paddingTop: 10,
-                paddingBottom: Math.max(insets.bottom, 20),
                 backgroundColor: t.bg,
+                borderTopWidth: 1,
+                borderTopColor: t.border,
+                paddingHorizontal: spacing.screenHorizontal,
+                paddingTop: 16,
+                paddingBottom: Math.max(insets.bottom, 20),
               }}
             >
-              <View className="flex-row gap-2.5">
+              <View className="flex-row gap-3">
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Appeler la pharmacie ${p.name}`}
                   onPress={openCall}
-                  className="h-[52px] w-[52px] items-center justify-center rounded-2xl border"
+                  className="h-[52px] w-[52px] items-center justify-center rounded-xl border"
                   style={{
                     borderColor: t.border,
-                    borderWidth: 1.5,
                     backgroundColor: t.surface,
                   }}
                 >
-                  <Phone size={22} color={t.accent} strokeWidth={2} />
+                  <Phone size={22} color={t.text} strokeWidth={2} />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Itinéraire vers ${p.name}, durée ${formatDuration(p.duration_min)}`}
                   onPress={pickDirections}
-                  className="min-h-[52px] flex-1 overflow-hidden rounded-2xl"
-                  style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
+                  className="min-h-[52px] flex-1 overflow-hidden rounded-xl"
+                  style={({ pressed }) => ({ 
+                    opacity: pressed ? 0.9 : 1,
+                  })}
                 >
                   <LinearGradient
                     colors={[...yablyOrangeGradient]}
@@ -604,7 +622,6 @@ function PharmacyDetailScreenInner() {
                     end={{ x: 1, y: 1 }}
                     style={{
                       flex: 1,
-                      minHeight: 52,
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -614,10 +631,10 @@ function PharmacyDetailScreenInner() {
                   >
                     <Waypoints size={18} color="#FFFFFF" strokeWidth={2} />
                     <Text
-                      className="text-[15px] font-bold text-white"
+                      className="text-[16px] font-bold text-white"
                       style={{ fontFamily: fonts.outfitBold }}
                     >
-                      Itinéraire — {formatDuration(p.duration_min)}
+                      Y aller ({formatDuration(p.duration_min)})
                     </Text>
                   </LinearGradient>
                 </Pressable>
@@ -628,20 +645,24 @@ function PharmacyDetailScreenInner() {
               <Animated.View
                 entering={SlideInDown.springify().damping(16).stiffness(210)}
                 exiting={FadeOut.duration(220)}
-                className="absolute left-4 right-4 rounded-2xl px-4 py-3 shadow-lg"
+                className="absolute left-4 right-4 rounded-xl px-4 py-3 shadow-sm flex-row items-center gap-3"
                 style={{
                   top: insets.top + 56,
-                  backgroundColor: t.primary,
+                  backgroundColor: t.surface,
+                  borderWidth: 1,
+                  borderColor: t.border,
                 }}
                 accessibilityRole="alert"
                 accessibilityLiveRegion="polite"
               >
+                <Trophy size={20} color={t.primary} />
                 <Animated.View entering={ZoomIn.delay(60).springify()}>
                   <Text
-                    className="text-center text-[16px] font-bold text-white"
+                    className="text-[15px] font-bold"
+                    style={{ color: t.text, fontFamily: fonts.outfitBold }}
                     accessibilityLabel="Félicitations, plus cinq points gagnés"
                   >
-                    🎉 +5 points !
+                    +5 points !
                   </Text>
                 </Animated.View>
               </Animated.View>

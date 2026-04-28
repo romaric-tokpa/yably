@@ -714,8 +714,8 @@ function HomeScreenInner() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={{
               paddingHorizontal: spacing.screenHorizontal,
-              paddingTop: 8,
-              paddingBottom: 28,
+              paddingTop: 12,
+              paddingBottom: 32,
               flexGrow: 1,
             }}
             refreshControl={
