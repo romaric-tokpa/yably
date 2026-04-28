@@ -56,7 +56,7 @@ export const useUIStore = create<UIState>()(
       nightMode: computeAutoNight(new Date()),
       nightModeOverride: null,
       nightModeOverrideExpiresAt: null,
-      viewMode: 'map',
+      viewMode: 'list',
       unreadNotificationCount: 0,
 
       refreshNightMode: () => {

@@ -17,7 +17,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useAppTheme } from '@/components/common/appThemeContext';
 import { YablyLogo } from '@/components/common/yablyLogo';
-import { mapAuthPasswordErrorToUserMessage } from '@/lib/auth-password';
 import { spacing, yablyOrangeGradient } from '@/lib/constants';
 import { fonts } from '@/lib/fonts';
 import { logger } from '@/lib/logger';
@@ -32,15 +31,11 @@ import { track } from '@/lib/analytics';
 
 function LoginScreenInner() {
   const { theme: t } = useAppTheme();
-  const { returnTo, afterSignup } = useLocalSearchParams<{
+  const { returnTo } = useLocalSearchParams<{
     returnTo?: string;
-    afterSignup?: string;
   }>();
 
-  const signupInfoVisible = afterSignup === '1';
-
   const [nationalDigits, setNationalDigits] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,44 +58,35 @@ function LoginScreenInner() {
       );
       return;
     }
-    if (password.length === 0) {
-      setError('Saisissez votre mot de passe.');
-      return;
-    }
 
     setLoading(true);
     setError(null);
-    track('auth_started', { flow: 'login' });
+    track('auth_started', { flow: 'login_otp' });
 
-    const { error: signError } = await supabase.auth.signInWithPassword({
+    const { error: signError } = await supabase.auth.signInWithOtp({
       phone: e164,
-      password,
     });
 
     setLoading(false);
 
     if (signError !== null) {
-      logger.error('signInWithPassword', signError);
-      setError(mapAuthPasswordErrorToUserMessage(signError.message));
+      logger.error('signInWithOtp', signError);
+      setError(signError.message);
       return;
     }
 
-    track('auth_completed', { method: 'phone_password' });
+    track('auth_completed', { method: 'phone_otp_sent' });
 
-    if (typeof returnTo === 'string' && returnTo.length > 0) {
-      router.replace(returnTo as Href);
-      return;
-    }
-    if (router.canDismiss()) {
-      router.dismiss(2);
-      return;
-    }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)' as Href);
-  }, [nationalDigits, password, returnTo]);
+    const rt = typeof returnTo === 'string' && returnTo.length > 0 ? returnTo : undefined;
+
+    router.push({
+      pathname: '/auth/verify',
+      params: {
+        phone: e164,
+        ...(rt !== undefined ? { returnTo: rt } : {}),
+      },
+    });
+  }, [nationalDigits, returnTo]);
 
   const continueWithoutAccount = (): void => {
     if (router.canGoBack()) {
@@ -155,27 +141,9 @@ function LoginScreenInner() {
               className="mt-2 px-2 text-center text-[13px] leading-5"
               style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
             >
-              Connectez-vous avec votre numéro et votre mot de passe
+              Connectez-vous avec votre numéro par SMS
             </Text>
           </View>
-
-          {signupInfoVisible ? (
-            <View
-              className="mb-4 rounded-2xl border px-3 py-3"
-              style={{
-                borderColor: t.border,
-                backgroundColor: t.surface,
-              }}
-            >
-              <Text
-                className="text-center text-[13px] leading-5"
-                style={{ color: t.text, fontFamily: fonts.outfitRegular }}
-              >
-                Compte créé. Utilisez le même numéro et le même mot de passe pour vous
-                connecter.
-              </Text>
-            </View>
-          ) : null}
 
           <View>
             <Text
@@ -227,36 +195,6 @@ function LoginScreenInner() {
               </View>
             </View>
 
-            <Text
-              className="mb-2 mt-4 text-xs font-semibold"
-              style={{ color: t.text, fontFamily: fonts.outfitSemiBold }}
-            >
-              Mot de passe
-            </Text>
-            <TextInput
-              accessibilityLabel="Mot de passe"
-              className="h-12 rounded-[14px] border px-3.5 text-[15px]"
-              style={{
-                borderColor: error !== null ? t.danger : t.border,
-                borderWidth: 1.5,
-                backgroundColor: t.surface,
-                color: t.text,
-                fontFamily: fonts.outfitMedium,
-              }}
-              value={password}
-              onChangeText={(v) => {
-                setError(null);
-                setPassword(v);
-              }}
-              placeholder="Votre mot de passe"
-              placeholderTextColor={t.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="password"
-              editable={!loading}
-            />
-
             {error !== null ? (
               <Text
                 className="mt-2 text-xs leading-4"
@@ -269,7 +207,7 @@ function LoginScreenInner() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Se connecter"
+            accessibilityLabel="Recevoir le code SMS"
             accessibilityState={{ disabled: loading }}
             className="mt-6 overflow-hidden rounded-2xl"
             disabled={loading}
@@ -300,7 +238,7 @@ function LoginScreenInner() {
                     className="text-[15px] font-bold text-white"
                     style={{ fontFamily: fonts.outfitBold }}
                   >
-                    Se connecter
+                    Recevoir le code SMS
                   </Text>
                 </>
               )}

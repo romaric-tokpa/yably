@@ -39,6 +39,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useAppTheme } from '@/components/common/appThemeContext';
 import { YablyLogo } from '@/components/common/yablyLogo';
+import { UserAvatar } from '@/components/common/userAvatar';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { COTE_IVOIRE_COMMUNES, spacing, yablyOrangeGradient } from '@/lib/constants';
 import { fonts } from '@/lib/fonts';
@@ -313,13 +314,25 @@ function ProfileScreenInner() {
           <Text className="text-center" style={{ color: t.danger }}>
             {profileError ?? 'Profil introuvable.'}
           </Text>
-          <Pressable
-            className="mt-6 rounded-[14px] px-6 py-3"
-            style={{ backgroundColor: t.primary }}
-            onPress={() => void fetchProfile()}
-          >
-            <Text className="font-bold text-white">Réessayer</Text>
-          </Pressable>
+          <View className="mt-6 flex-row gap-4">
+            <Pressable
+              className="rounded-[14px] px-6 py-3"
+              style={{ backgroundColor: t.surfaceAlt, borderColor: t.border, borderWidth: 1 }}
+              onPress={async () => {
+                await useAuthStore.getState().signOut();
+                router.replace('/(tabs)/profile');
+              }}
+            >
+              <Text className="font-bold" style={{ color: t.textSoft }}>Se déconnecter</Text>
+            </Pressable>
+            <Pressable
+              className="rounded-[14px] px-6 py-3"
+              style={{ backgroundColor: t.primary }}
+              onPress={() => void fetchProfile()}
+            >
+              <Text className="font-bold text-white">Réessayer</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -350,14 +363,6 @@ function ProfileScreenInner() {
       : displayNameRaw !== undefined && displayNameRaw.length > 0
         ? displayNameRaw
         : 'Utilisateur';
-  const emailFromRow = profile.email?.trim() ?? '';
-  const profileEmail =
-    emailFromRow.length > 0
-      ? emailFromRow
-      : registrationMeta !== null && registrationMeta.email.length > 0
-        ? registrationMeta.email
-        : '';
-
   const emptyField = '—';
 
   const points = profile.points;
@@ -388,40 +393,35 @@ function ProfileScreenInner() {
           Mon profil
         </Text>
 
-        <View
-          className="mb-3 flex-row items-center gap-3.5 rounded-[20px] border p-4"
-          style={{ borderColor: t.border, backgroundColor: t.surface }}
-        >
-          <LinearGradient
-            colors={[...yablyOrangeGradient]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 18,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+        <View className="mb-6 mt-2 items-center">
+          <UserAvatar avatarUrl={profile.avatar_url} size={90} />
+          <Text
+            className="mt-4 text-[22px] font-extrabold"
+            style={{ color: t.text, fontFamily: fonts.outfitExtraBold }}
+            numberOfLines={1}
           >
-            <User size={26} color="#FFFFFF" strokeWidth={2} />
-          </LinearGradient>
-          <View className="min-w-0 flex-1">
+            {cardUserTitle}
+          </Text>
+          <Text
+            className="mt-1 text-[15px]"
+            style={{ color: t.textSoft, fontFamily: fonts.outfitMedium }}
+            numberOfLines={1}
+          >
+            {formatProfilePhone(profile.phone)}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/profile/edit-account')}
+            className="mt-5 flex-row items-center justify-center rounded-full px-6 py-2.5"
+            style={{ backgroundColor: t.surfaceAlt, borderColor: t.border, borderWidth: 1 }}
+          >
             <Text
-              className="text-[17px] font-extrabold"
-              style={{ color: t.text, fontFamily: fonts.outfitExtraBold }}
-              numberOfLines={1}
+              className="text-[14px] font-bold"
+              style={{ color: t.text, fontFamily: fonts.outfitBold }}
             >
-              {cardUserTitle}
+              Modifier mon profil
             </Text>
-            <Text
-              className="mt-0.5 text-xs"
-              style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
-              numberOfLines={1}
-            >
-              {formatProfilePhone(profile.phone)}
-            </Text>
-          </View>
+          </Pressable>
         </View>
 
         <LinearGradient
@@ -482,91 +482,6 @@ function ProfileScreenInner() {
           </Text>
         </LinearGradient>
 
-        <View
-          className="mb-3 overflow-hidden rounded-[18px] border p-4"
-          style={{ borderColor: t.border, backgroundColor: t.surface }}
-        >
-          <View className="mb-3 flex-row items-center justify-between gap-2">
-            <Text
-              className="flex-1 text-[11px] font-bold uppercase tracking-wide"
-              style={{ color: t.textMuted, fontFamily: fonts.outfitBold }}
-            >
-              Informations du compte
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Modifier les informations du compte"
-              onPress={() => router.push('/profile/edit-account')}
-              hitSlop={8}
-              className="rounded-lg px-2 py-1"
-            >
-              <Text
-                className="text-[12px] font-bold"
-                style={{ color: t.primary, fontFamily: fonts.outfitBold }}
-              >
-                Modifier
-              </Text>
-            </Pressable>
-          </View>
-          <View className="gap-3">
-            <View>
-              <Text
-                className="text-[11px] font-semibold"
-                style={{ color: t.textMuted, fontFamily: fonts.outfitSemiBold }}
-              >
-                Prénom
-              </Text>
-              <Text
-                className="mt-0.5 text-[15px] font-semibold"
-                style={{ color: t.text, fontFamily: fonts.outfitSemiBold }}
-              >
-                {profileFirstName.length > 0 ? profileFirstName : emptyField}
-              </Text>
-            </View>
-            <View>
-              <Text
-                className="text-[11px] font-semibold"
-                style={{ color: t.textMuted, fontFamily: fonts.outfitSemiBold }}
-              >
-                Nom
-              </Text>
-              <Text
-                className="mt-0.5 text-[15px] font-semibold"
-                style={{ color: t.text, fontFamily: fonts.outfitSemiBold }}
-              >
-                {profileLastName.length > 0 ? profileLastName : emptyField}
-              </Text>
-            </View>
-            <View>
-              <Text
-                className="text-[11px] font-semibold"
-                style={{ color: t.textMuted, fontFamily: fonts.outfitSemiBold }}
-              >
-                E-mail
-              </Text>
-              <Text
-                className="mt-0.5 text-[15px] font-semibold"
-                style={{ color: t.text, fontFamily: fonts.outfitSemiBold }}
-              >
-                {profileEmail.length > 0 ? profileEmail : emptyField}
-              </Text>
-            </View>
-            <View>
-              <Text
-                className="text-[11px] font-semibold"
-                style={{ color: t.textMuted, fontFamily: fonts.outfitSemiBold }}
-              >
-                Téléphone
-              </Text>
-              <Text
-                className="mt-0.5 text-[15px] font-semibold"
-                style={{ color: t.text, fontFamily: fonts.outfitSemiBold }}
-              >
-                {formatProfilePhone(profile.phone)}
-              </Text>
-            </View>
-          </View>
-        </View>
 
         <View
           className="overflow-hidden rounded-[18px] border"

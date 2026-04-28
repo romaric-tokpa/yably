@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import { Hospital } from 'lucide-react-native';
+import MapView, { Marker, Circle, type Region } from 'react-native-maps';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -12,7 +13,7 @@ import Animated, {
 
 import { useAppTheme } from '@/components/common/appThemeContext';
 import { GlassPanel } from '@/components/common/glassPanel';
-import { YablyLogo } from '@/components/common/yablyLogo';
+
 import type { ThemeColors } from '@/lib/constants';
 import { haversineDistanceMeters } from '@/lib/distance';
 import { formatDistance } from '@/lib/format';
@@ -125,8 +126,6 @@ type PharmacyMapMarkerPinProps = {
   pulse: boolean;
 };
 
-const TEARDROP = 36;
-
 function PharmacyMapMarkerPin({ color, pulse }: PharmacyMapMarkerPinProps) {
   const scale = useSharedValue(1);
 
@@ -155,29 +154,27 @@ function PharmacyMapMarkerPin({ color, pulse }: PharmacyMapMarkerPinProps) {
     transform: [{ scale: scale.value }],
   }));
 
+  const CIRCLE_SIZE = 32;
+
   const drop = (
     <View
       style={{
-        width: TEARDROP,
-        height: TEARDROP,
-        borderTopLeftRadius: TEARDROP / 2,
-        borderTopRightRadius: TEARDROP / 2,
-        borderBottomLeftRadius: TEARDROP / 2,
-        borderBottomRightRadius: 5,
+        width: CIRCLE_SIZE,
+        height: CIRCLE_SIZE,
+        borderRadius: CIRCLE_SIZE / 2,
         backgroundColor: color,
-        transform: [{ rotate: '-45deg' }],
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
         shadowColor: color,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.35,
-        shadowRadius: 8,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
+        elevation: 6,
       }}
     >
-      <View style={{ transform: [{ rotate: '45deg' }], marginTop: -3 }}>
-        <YablyLogo size={16} color="#FFFFFF" fillOpacity={0.3} strokeWidth={1.5} />
-      </View>
+      <Hospital size={18} color="#FFFFFF" strokeWidth={2.5} />
     </View>
   );
 
@@ -217,7 +214,7 @@ function PharmacyMarkerOnMap({ pharmacy, pal, onVoirDetails }: PharmacyMarkerOnM
       tracksViewChanges={Platform.OS === 'android'}
       onPress={onVoirDetails}
     >
-      <View className="items-center" style={{ width: TEARDROP + 8 }}>
+      <View className="items-center" style={{ width: 40 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Ouvrir ${pharmacy.name}`}
@@ -226,37 +223,6 @@ function PharmacyMarkerOnMap({ pharmacy, pal, onVoirDetails }: PharmacyMarkerOnM
         >
           <PharmacyMapMarkerPin color={color} pulse={isPulse} />
         </Pressable>
-        <View
-          className="mt-1 max-w-[140px] rounded-lg border px-2 py-1"
-          style={{
-            borderColor: pal.border,
-            backgroundColor: pal.surface,
-          }}
-        >
-          <Text className="text-[11px] font-bold" style={{ color: pal.text }} numberOfLines={1}>
-            {pharmacy.name}
-          </Text>
-          <Text className="text-[10px] font-semibold" style={{ color: pal.primary }}>
-            {formatDistance(pharmacy.distance_km)}
-          </Text>
-          <View
-            className="mt-0.5 self-start rounded px-1.5 py-0.5"
-            style={{
-              borderWidth: 1,
-              borderColor: color,
-              backgroundColor:
-                tone === 'verified'
-                  ? pal.primaryMuted
-                  : tone === 'closed'
-                    ? pal.surfaceAlt
-                    : pal.accentMuted,
-            }}
-          >
-            <Text className="text-[9px] font-bold" style={{ color }}>
-              {badgeLabel(tone)}
-            </Text>
-          </View>
-        </View>
       </View>
     </Marker>
   );
@@ -290,7 +256,7 @@ export function PharmacyMap({
   userLocation,
   onMarkerPress,
 }: PharmacyMapProps) {
-  const { theme: pal } = useAppTheme();
+  const { theme: pal, nightMode } = useAppTheme();
   const mapRef = useRef<MapView | null>(null);
 
   const initialRegion = useMemo(
@@ -360,19 +326,31 @@ export function PharmacyMap({
         showsMyLocationButton={false}
       >
         {userLocation !== null ? (
-          <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={Platform.OS === 'android'}
-          >
-            <View
-              className="h-6 w-6 rounded-full border-[3px] border-white"
-              style={{ backgroundColor: USER_MARKER_BLUE }}
+          <>
+            <Circle
+              center={{
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              }}
+              radius={20000}
+              fillColor={nightMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)'}
+              strokeColor="rgba(59, 130, 246, 0.4)"
+              strokeWidth={1}
             />
-          </Marker>
+            <Marker
+              coordinate={{
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={Platform.OS === 'android'}
+            >
+              <View
+                className="h-6 w-6 rounded-full border-[3px] border-white"
+                style={{ backgroundColor: USER_MARKER_BLUE }}
+              />
+            </Marker>
+          </>
         ) : null}
 
         {pharmacies.map((p) => (

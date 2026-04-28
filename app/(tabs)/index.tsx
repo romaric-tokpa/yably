@@ -278,113 +278,45 @@ function HomeScreenInner() {
               paddingVertical: 12,
             }}
           >
-            <View className="flex-row items-center justify-between gap-2">
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Ouvrir le profil"
-                onPress={() => router.push('/(tabs)/profile')}
-                className="min-w-0 flex-1 flex-row items-center gap-3"
-                style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
-              >
-                <UserAvatar avatarUrl={profile?.avatar_url} size={50} />
-                <View className="min-w-0 flex-1">
+            <View className="flex-row items-center justify-between gap-3">
+              <View className="min-w-0 flex-1 flex-row items-center gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Ouvrir le profil"
+                  onPress={() => router.push('/(tabs)/profile')}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
+                >
+                  <UserAvatar avatarUrl={profile?.avatar_url} size={46} />
+                </Pressable>
+                
+                <View className="min-w-0 flex-1 justify-center">
                   <Text
-                    numberOfLines={2}
-                    className="text-[17px] font-bold leading-snug"
-                    style={{
-                      color: t.text,
-                      fontFamily: fonts.outfitBold,
-                    }}
+                    numberOfLines={1}
+                    className="text-[18px] font-bold tracking-tight"
+                    style={{ color: t.text, fontFamily: fonts.outfitBold }}
                   >
                     {greetingLine}
                   </Text>
-                  <View className="mt-0.5 flex-row items-center gap-1">
-                    <YablyLogo size={13} color={t.accent} fillOpacity={0.2} strokeWidth={1.8} />
+                  
+                  <View className="mt-1 flex-row items-center gap-1.5">
+                    <MapPin size={12} color={t.primary} strokeWidth={2.5} />
                     <Text
-                      className="text-[11px] font-semibold"
-                      style={{
-                        color: t.textMuted,
-                        fontFamily: fonts.outfitSemiBold,
-                      }}
+                      numberOfLines={1}
+                      className="flex-1 text-[12px]"
+                      style={{ color: t.textSoft, fontFamily: fonts.outfitMedium }}
                     >
-                      Pharmacies de garde
-                    </Text>
-                  </View>
-                  <View className="mt-1.5 flex-row items-start gap-1.5">
-                    <MapPin size={12} color={t.textSoft} strokeWidth={2} style={{ marginTop: 2 }} />
-                    <View className="min-w-0 flex-1">
-                      {locLoading && location === null ? (
-                        <Text
-                          className="text-[10px] leading-4"
-                          style={{
-                            color: t.textMuted,
-                            fontFamily: fonts.outfitRegular,
-                          }}
-                        >
-                          Localisation en cours…
-                        </Text>
-                      ) : location === null ? (
-                        <Text
-                          className="text-[10px] leading-4"
-                          style={{
-                            color: t.textMuted,
-                            fontFamily: fonts.outfitRegular,
-                          }}
-                          numberOfLines={3}
-                        >
-                          {locError ?? 'Position indisponible'}
-                        </Text>
-                      ) : (
-                        <Text
-                          className="text-[10px] leading-4"
-                          style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
-                          numberOfLines={3}
-                          accessibilityLabel={
-                            userPlaceLabel !== null && userPlaceLabel.length > 0
-                              ? `Position actuelle : ${userPlaceLabel}`
-                              : userCoordsLabel !== null
-                                ? `Position actuelle : ${userCoordsLabel}`
-                                : 'Position actuelle'
-                          }
-                        >
-                          <Text
-                            style={{ fontFamily: fonts.outfitSemiBold, color: t.textMuted }}
-                          >
-                            Position :{' '}
-                          </Text>
-                          {userPlaceLabel !== null && userPlaceLabel.length > 0
+                      {locLoading && location === null
+                        ? 'Localisation en cours…'
+                        : location === null
+                          ? locError ?? 'Position indisponible'
+                          : userPlaceLabel && userPlaceLabel.length > 0
                             ? userPlaceLabel
-                            : (userCoordsLabel ?? '—')}
-                        </Text>
-                      )}
-                    </View>
+                            : userCoordsLabel ?? 'Position actuelle'}
+                    </Text>
                   </View>
                 </View>
-              </Pressable>
+              </View>
               <View className="flex-row items-center gap-2">
-                {nightMode && viewMode === 'list' ? (
-                  <GlassPanel
-                    borderRadius={20}
-                    intensity={32}
-                    style={{ maxWidth: 130 }}
-                    contentStyle={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                    }}
-                  >
-                    <PulseDot color={t.success} size={6} />
-                    <Text
-                      className="text-[10px] font-bold"
-                      style={{ color: t.success, fontFamily: fonts.outfitBold }}
-                      numberOfLines={1}
-                    >
-                      {filteredPharmacies.length} ouvertes
-                    </Text>
-                  </GlassPanel>
-                ) : null}
                 <GlassPanel
                   borderRadius={14}
                   intensity={38}

@@ -1,6 +1,8 @@
 import { useFocusEffect, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Save } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { useCallback, useState, type ReactElement } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +22,8 @@ import { useAppTheme } from '@/components/common/appThemeContext';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { spacing, yablyOrangeGradient } from '@/lib/constants';
 import { fonts } from '@/lib/fonts';
+import { supabase } from '@/lib/supabase';
+import { UserAvatar } from '@/components/common/userAvatar';
 import {
   firstNameFromDisplayName,
   lastNameFromDisplayName,
@@ -44,7 +48,7 @@ function EditAccountScreenInner(): ReactElement {
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [nationalDigits, setNationalDigits] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,16 +85,9 @@ function EditAccountScreenInner(): ReactElement {
         registrationMeta !== null && registrationMeta.lastName.length > 0
           ? registrationMeta.lastName
           : lastNameFromDisplayName(profile.display_name);
-      const emailFromRow = profile.email?.trim() ?? '';
-      const em =
-        emailFromRow.length > 0
-          ? emailFromRow
-          : registrationMeta !== null && registrationMeta.email.length > 0
-            ? registrationMeta.email
-            : '';
       setFirstName(fn);
       setLastName(ln);
-      setEmail(em);
+      setAvatarUrl(profile.avatar_url ?? null);
       setNationalDigits(national10FromProfilePhone(profile.phone));
       setError(null);
     }, [profile, registrationMeta]),
@@ -103,9 +100,12 @@ function EditAccountScreenInner(): ReactElement {
       await updateAccount({
         firstName,
         lastName,
-        email,
         nationalDigits,
       });
+      if (avatarUrl !== profile?.avatar_url) {
+        await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', userId);
+        void fetchProfile();
+      }
       router.back();
     } catch (e) {
       logger.error('edit-account submit', e);
@@ -183,6 +183,50 @@ function EditAccountScreenInner(): ReactElement {
             par SMS selon la configuration du projet.
           </Text>
 
+          <View className="mb-6 items-center">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Modifier la photo de profil"
+              onPress={async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ['images'],
+                  allowsEditing: true,
+                  aspect: [1, 1],
+                  quality: 0.5,
+                  base64: true,
+                });
+                if (!result.canceled && result.assets[0].base64 && userId !== null) {
+                  setSaving(true);
+                  setError(null);
+                  try {
+                    const ext = result.assets[0].uri.split('.').pop() ?? 'jpg';
+                    const path = `${userId}/${Date.now()}.${ext}`;
+                    const { error: uploadError } = await supabase.storage
+                      .from('avatars')
+                      .upload(path, decode(result.assets[0].base64), {
+                        contentType: `image/${ext}`,
+                      });
+                    if (uploadError !== null) throw uploadError;
+                    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+                    setAvatarUrl(data.publicUrl);
+                  } catch (err) {
+                    logger.error('upload avatar', err);
+                    setError("Erreur lors de l'upload de l'image.");
+                  } finally {
+                    setSaving(false);
+                  }
+                }
+              }}
+              style={({ pressed }) => ({ opacity: saving ? 0.5 : pressed ? 0.8 : 1 })}
+              disabled={saving}
+            >
+              <UserAvatar avatarUrl={avatarUrl} size={80} />
+              <View className="mt-2 rounded-[10px] px-3 py-1.5" style={{ backgroundColor: t.surfaceAlt, borderColor: t.border, borderWidth: 1 }}>
+                <Text style={{ color: t.primary, fontFamily: fonts.outfitSemiBold, fontSize: 12 }}>Modifier la photo</Text>
+              </View>
+            </Pressable>
+          </View>
+
           <RequiredFieldLabel t={t}>Prénom</RequiredFieldLabel>
           <TextInput
             accessibilityLabel="Prénom, champ requis"
@@ -232,34 +276,6 @@ function EditAccountScreenInner(): ReactElement {
             autoCapitalize="words"
             autoCorrect={false}
             textContentType="familyName"
-            editable={!saving}
-          />
-
-          <RequiredFieldLabel t={t}>E-mail</RequiredFieldLabel>
-          <TextInput
-            accessibilityLabel="Adresse e-mail, champ requis"
-            className="mb-3 rounded-[14px] border px-3.5 text-[15px]"
-            style={{
-              width: '100%',
-              minHeight: 48,
-              borderColor: t.border,
-              borderWidth: 1.5,
-              backgroundColor: t.surface,
-              color: t.text,
-              fontFamily: fonts.outfitMedium,
-            }}
-            value={email}
-            onChangeText={(v) => {
-              setError(null);
-              setEmail(v);
-            }}
-            placeholder="exemple@email.com"
-            placeholderTextColor={t.textMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="emailAddress"
             editable={!saving}
           />
 

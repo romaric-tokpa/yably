@@ -5,7 +5,6 @@
 export type RegistrationMeta = {
   firstName: string;
   lastName: string;
-  email: string;
 };
 
 export function registrationMetaFromUserMetadata(
@@ -13,7 +12,6 @@ export function registrationMetaFromUserMetadata(
 ): RegistrationMeta {
   const rawFirst = meta?.first_name;
   const rawLast = meta?.last_name;
-  const rawEmail = meta?.email;
   const firstName =
     typeof rawFirst === 'string' && rawFirst.trim().length > 0
       ? rawFirst.trim()
@@ -22,9 +20,5 @@ export function registrationMetaFromUserMetadata(
     typeof rawLast === 'string' && rawLast.trim().length > 0
       ? rawLast.trim()
       : '';
-  const email =
-    typeof rawEmail === 'string' && rawEmail.trim().length > 0
-      ? rawEmail.trim()
-      : '';
-  return { firstName, lastName, email };
+  return { firstName, lastName };
 }

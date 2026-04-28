@@ -19,14 +19,7 @@ import { RequiredFieldLabel } from '@/components/common/requiredFieldLabel';
 import { useAppTheme } from '@/components/common/appThemeContext';
 import { YablyLogo } from '@/components/common/yablyLogo';
 import {
-  registrationEmailInvalidMessage,
-  validateRegistrationEmail,
-} from '@/lib/auth-email';
-import {
-  mapAuthPasswordErrorToUserMessage,
-  registrationPasswordErrorMessage,
   validatePersonName,
-  validateRegistrationPassword,
 } from '@/lib/auth-password';
 import { spacing, yablyOrangeGradient } from '@/lib/constants';
 import { fonts } from '@/lib/fonts';
@@ -46,10 +39,7 @@ function RegisterScreenInner() {
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
   const [nationalDigits, setNationalDigits] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,12 +72,6 @@ function RegisterScreenInner() {
       return;
     }
 
-    const emailNorm = validateRegistrationEmail(email);
-    if (emailNorm === null) {
-      setError(registrationEmailInvalidMessage());
-      return;
-    }
-
     const e164 = parseCiPhoneToE164(nationalDigits);
     if (e164 === null) {
       setError(
@@ -96,23 +80,15 @@ function RegisterScreenInner() {
       return;
     }
 
-    const pwdErr = validateRegistrationPassword(password, confirmPassword);
-    if (pwdErr !== null) {
-      setError(registrationPasswordErrorMessage(pwdErr));
-      return;
-    }
-
     setLoading(true);
     track('auth_started', { flow: 'register' });
 
-    const { data, error: signErr } = await supabase.auth.signUp({
+    const { error: signErr } = await supabase.auth.signInWithOtp({
       phone: e164,
-      password,
       options: {
         data: {
           first_name: prenom,
           last_name: nom,
-          email: emailNorm,
         },
       },
     });
@@ -120,48 +96,26 @@ function RegisterScreenInner() {
     setLoading(false);
 
     if (signErr !== null) {
-      logger.error('signUp', signErr);
-      setError(mapAuthPasswordErrorToUserMessage(signErr.message));
+      logger.error('signInWithOtp', signErr);
+      setError(signErr.message);
       return;
     }
 
-    track('auth_completed', { method: 'phone_password_signup' });
+    track('auth_completed', { method: 'phone_otp_signup' });
 
-    const rt =
-      typeof returnTo === 'string' && returnTo.length > 0 ? returnTo : undefined;
+    const rt = typeof returnTo === 'string' && returnTo.length > 0 ? returnTo : undefined;
 
-    if (data.session !== null) {
-      if (typeof rt === 'string' && rt.length > 0) {
-        router.replace(rt as Href);
-        return;
-      }
-      if (router.canDismiss()) {
-        router.dismiss(2);
-        return;
-      }
-      if (router.canGoBack()) {
-        router.back();
-        return;
-      }
-      router.replace('/(tabs)' as Href);
-      return;
-    }
-
-    /* Pas de session tout de suite : invitation à se connecter (ex. config. Supabase). */
     router.replace({
-      pathname: '/auth/login',
+      pathname: '/auth/verify',
       params: {
-        afterSignup: '1',
+        phone: e164,
         ...(rt !== undefined ? { returnTo: rt } : {}),
       },
     });
   }, [
     firstName,
     lastName,
-    email,
     nationalDigits,
-    password,
-    confirmPassword,
     returnTo,
   ]);
 
@@ -198,7 +152,7 @@ function RegisterScreenInner() {
               className="mt-2 px-2 text-center text-[13px] leading-5"
               style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}
             >
-              Prénom, nom, e-mail, numéro et mot de passe pour créer votre compte
+              Prénom, nom et numéro de téléphone pour créer votre compte
             </Text>
           </View>
 
@@ -254,34 +208,6 @@ function RegisterScreenInner() {
             editable={!loading}
           />
 
-          <RequiredFieldLabel t={t}>E-mail</RequiredFieldLabel>
-          <TextInput
-            accessibilityLabel="Adresse e-mail, champ requis"
-            className="mb-3 rounded-[14px] border px-3.5 text-[15px]"
-            style={{
-              width: '100%',
-              minHeight: 48,
-              borderColor: t.border,
-              borderWidth: 1.5,
-              backgroundColor: t.surface,
-              color: t.text,
-              fontFamily: fonts.outfitMedium,
-            }}
-            value={email}
-            onChangeText={(v) => {
-              setError(null);
-              setEmail(v);
-            }}
-            placeholder="exemple@email.com"
-            placeholderTextColor={t.textMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="emailAddress"
-            editable={!loading}
-          />
-
           <RequiredFieldLabel t={t}>Téléphone</RequiredFieldLabel>
           <View className="mb-3 w-full flex-row items-stretch gap-1.5">
             <View
@@ -326,67 +252,6 @@ function RegisterScreenInner() {
             </View>
           </View>
 
-          <RequiredFieldLabel t={t}>Mot de passe</RequiredFieldLabel>
-          <TextInput
-            accessibilityLabel="Mot de passe, champ requis"
-            className="mb-3 rounded-[14px] border px-3.5 text-[15px]"
-            style={{
-              width: '100%',
-              minHeight: 48,
-              borderColor: t.border,
-              borderWidth: 1.5,
-              backgroundColor: t.surface,
-              color: t.text,
-              fontFamily: fonts.outfitMedium,
-            }}
-            value={password}
-            onChangeText={(v) => {
-              setError(null);
-              setPassword(v);
-            }}
-            placeholder="Minimum 8 caractères"
-            placeholderTextColor={t.textMuted}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="newPassword"
-            editable={!loading}
-          />
-
-          <RequiredFieldLabel t={t}>Confirmation du mot de passe</RequiredFieldLabel>
-          <TextInput
-            accessibilityLabel="Confirmation du mot de passe, champ requis"
-            className="mb-2 rounded-[14px] border px-3.5 text-[15px]"
-            style={{
-              width: '100%',
-              minHeight: 48,
-              borderColor: t.border,
-              borderWidth: 1.5,
-              backgroundColor: t.surface,
-              color: t.text,
-              fontFamily: fonts.outfitMedium,
-            }}
-            value={confirmPassword}
-            onChangeText={(v) => {
-              setError(null);
-              setConfirmPassword(v);
-            }}
-            placeholder="Retaper le mot de passe"
-            placeholderTextColor={t.textMuted}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="newPassword"
-            editable={!loading}
-          />
-
-          <Text
-            className="mb-4 text-[11px] leading-4"
-            style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}
-          >
-            Au moins 8 caractères, une lettre et un chiffre.
-          </Text>
-
           {error !== null ? (
             <Text
               className="mb-3 text-[13px] leading-5"
@@ -429,7 +294,7 @@ function RegisterScreenInner() {
                     className="text-[15px] font-bold text-white"
                     style={{ fontFamily: fonts.outfitBold }}
                   >
-                    S&apos;inscrire
+                    Recevoir le code
                   </Text>
                 </>
               )}

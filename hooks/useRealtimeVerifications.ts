@@ -20,7 +20,7 @@ export function useRealtimeVerifications(): void {
 
   useEffect(() => {
     const channel = supabase
-      .channel('realtime-verifications')
+      .channel(`realtime-verifications-${Date.now()}`)
       .on(
         'postgres_changes',
         {

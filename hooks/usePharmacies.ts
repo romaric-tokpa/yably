@@ -121,21 +121,7 @@ export function usePharmacies(
   const queryKey = ['pharmacies-garde', latitude, longitude] as const;
 
   useLayoutEffect(() => {
-    if (!enabled || latitude === null || longitude === null) return;
-    let cancelled = false;
-    void (async () => {
-      const list = await loadPharmacies(latitude, longitude);
-      if (cancelled || list.length === 0) return;
-      const last = await getLastSyncDate();
-      queryClient.setQueryData<PharmaciesGardeQueryData>(queryKey, {
-        pharmacies: list,
-        isOffline: false,
-        lastSyncDate: last,
-      });
-    })();
-    return () => {
-      cancelled = true;
-    };
+    // SQLite désactivé : aucune lecture au montage
   }, [enabled, latitude, longitude, queryClient]);
 
   const query = useQuery({
@@ -149,25 +135,8 @@ export function usePharmacies(
         return { pharmacies: [], isOffline: false, lastSyncDate: null };
       }
 
-      const localList = await loadPharmacies(latitude, longitude);
-      const lastLocal = await getLastSyncDate();
-
-      const net = await getNetworkStateAsync();
-      const online = isNetworkOnline(net);
-
-      if (!online) {
-        if (localList.length > 0) {
-          return {
-            pharmacies: localList,
-            isOffline: true,
-            lastSyncDate: lastLocal,
-          };
-        }
-        throw new Error(
-          'Pas de réseau et aucune donnée en cache pour cette zone.',
-        );
-      }
-
+      // SQLite et vérifications réseau désactivées pour éviter les blocages.
+      // Appel direct au backend.
       const { data, error } = await supabase.rpc('get_pharmacies_de_garde', {
         user_lat: latitude,
         user_lng: longitude,
@@ -175,37 +144,13 @@ export function usePharmacies(
       });
 
       if (error !== null) {
-        if (localList.length > 0) {
-          return {
-            pharmacies: localList,
-            isOffline: true,
-            lastSyncDate: lastLocal,
-          };
-        }
         throw normalizeError(error);
       }
 
       const rows = data ?? [];
       const pharmacies = rows.map((row) => mapRpcRowToPharmacyDeGarde(row));
 
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: verifData, error: verifErr } = await supabase
-        .from('verifications')
-        .select('id, pharmacy_id, status, created_at')
-        .gte('created_at', since)
-        .limit(5000);
-
-      const verRows =
-        verifErr === null && verifData !== null
-          ? verifData.map((v) => ({
-              id: v.id,
-              pharmacy_id: v.pharmacy_id,
-              status: v.status,
-              created_at: v.created_at,
-            }))
-          : [];
-
-      await persistGardeSnapshotFromRpc(pharmacies, verRows);
+      // SQLite désactivé : on ne sauvegarde plus dans le cache local (persistGardeSnapshotFromRpc retiré)
 
       return {
         pharmacies,

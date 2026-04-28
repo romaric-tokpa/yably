@@ -141,11 +141,8 @@ export function useLocation(): UseLocationReturn {
   const [placeLabel, setPlaceLabel] = useState<string | null>(null);
 
   const applyCoords = useCallback((c: StoredPayload | null) => {
-    if (c === null) {
-      setLocation(null);
-      return;
-    }
-    setLocation({ latitude: c.latitude, longitude: c.longitude });
+    // Localisation par défaut forcée au Plateau (Abidjan) pour l'instant
+    setLocation({ latitude: 5.31989700, longitude: -4.01676200 });
   }, []);
 
   const resolveLocation = useCallback(
@@ -348,7 +345,8 @@ export function useLocation(): UseLocationReturn {
           const line = placeLineFromGeocode(first);
           setPlaceLabel(line.length > 0 ? line : null);
         } catch (e) {
-          logger.error('reverseGeocodeAsync', e);
+          // Sur le simulateur, le rate limit (trop de requêtes) est fréquent. 
+          // On ignore l'erreur en silencieux pour éviter l'écran rouge d'Expo.
           if (!cancelled) {
             setPlaceLabel(null);
           }

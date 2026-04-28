@@ -29,7 +29,6 @@ type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 export type AccountUpdatePayload = {
   firstName: string;
   lastName: string;
-  email: string;
   nationalDigits: string;
 };
 
@@ -131,11 +130,6 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       throw new Error('Renseignez votre nom de famille.');
     }
 
-    const emailNorm = validateRegistrationEmail(payload.email);
-    if (emailNorm === null) {
-      throw new Error(registrationEmailInvalidMessage());
-    }
-
     const e164 = parseCiPhoneToE164(payload.nationalDigits);
     if (e164 === null) {
       throw new Error(
@@ -160,7 +154,6 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       data: {
         first_name: prenom,
         last_name: nom,
-        email: emailNorm,
       },
     };
     if (e164 !== currentPhone) {

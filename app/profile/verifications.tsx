@@ -8,10 +8,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import { CheckCircle, XCircle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useAppTheme } from '@/components/common/appThemeContext';
+import { fonts } from '@/lib/fonts';
 import { formatVerificationRelative } from '@/lib/format';
 import { spacing } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
@@ -71,29 +73,36 @@ function MyVerificationsScreenInner() {
         </View>
       ) : displayError !== null ? (
         <View className="flex-1 items-center justify-center p-6">
-          <Text className="text-center" style={{ color: t.danger }}>
+          <Text className="text-center text-[15px]" style={{ color: t.danger, fontFamily: fonts.outfitMedium }}>
             {displayError}
           </Text>
           <Pressable
-            className="mt-4 rounded-[14px] px-5 py-3"
+            className="mt-4 rounded-[14px] px-6 py-3"
             style={{ backgroundColor: t.primary }}
             onPress={() => void query.refetch()}
           >
-            <Text className="font-bold text-white">Réessayer</Text>
+            <Text className="text-[14px] font-bold text-white" style={{ fontFamily: fonts.outfitBold }}>
+              Réessayer
+            </Text>
           </Pressable>
         </View>
       ) : query.data !== undefined && query.data.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center" style={{ color: t.textSoft }}>
-            Aucune vérification pour le moment. Confirmez l’ouverture d’une
-            pharmacie depuis la fiche détail.
+        <View className="flex-1 items-center justify-center px-10">
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: t.surfaceAlt }}>
+            <CheckCircle size={32} color={t.textMuted} strokeWidth={1.5} />
+          </View>
+          <Text className="text-center text-[15px] leading-6" style={{ color: t.textSoft, fontFamily: fonts.outfitRegular }}>
+            Aucune vérification pour le moment.
+          </Text>
+          <Text className="mt-2 text-center text-[13px] leading-5" style={{ color: t.textMuted, fontFamily: fonts.outfitRegular }}>
+            Confirmez l'ouverture ou la fermeture d'une pharmacie depuis sa fiche pour gagner des points.
           </Text>
         </View>
       ) : (
         <FlatList
           contentContainerStyle={{
             paddingHorizontal: spacing.screenHorizontal,
-            paddingVertical: 12,
+            paddingVertical: 16,
           }}
           data={query.data}
           keyExtractor={(item) => item.id}
@@ -106,30 +115,52 @@ function MyVerificationsScreenInner() {
           }
           renderItem={({ item }) => {
             const name = item.pharmacies?.name ?? 'Pharmacie';
-            const statusLabel =
-              item.status === 'open' ? 'Ouvert' : 'Fermeture signalée';
-            const statusColor = item.status === 'open' ? t.success : t.danger;
+            const isOpen = item.status === 'open';
+            const statusLabel = isOpen ? 'Confirmé ouvert' : 'Signalé fermé';
+            const statusColor = isOpen ? t.success : t.danger;
+            const bgStatus = isOpen ? 'rgba(46,234,173,0.1)' : 'rgba(255,75,75,0.1)';
+
             return (
               <View
-                className="mb-3 rounded-[20px] border p-4"
+                className="mb-3 flex-row items-center gap-4 rounded-[20px] border p-4"
                 style={{
                   borderColor: t.border,
                   backgroundColor: t.surface,
                 }}
               >
-                <Text className="text-base font-bold" style={{ color: t.text }}>
-                  {name}
-                </Text>
-                <View className="mt-2 flex-row flex-wrap items-center gap-2">
+                <View
+                  className="h-11 w-11 items-center justify-center rounded-full"
+                  style={{ backgroundColor: bgStatus }}
+                >
+                  {isOpen ? (
+                    <CheckCircle size={22} color={statusColor} strokeWidth={2.5} />
+                  ) : (
+                    <XCircle size={22} color={statusColor} strokeWidth={2.5} />
+                  )}
+                </View>
+                <View className="min-w-0 flex-1">
                   <Text
-                    className="text-[14px] font-semibold"
-                    style={{ color: statusColor }}
+                    className="text-[16px] font-bold"
+                    style={{ color: t.text, fontFamily: fonts.outfitBold }}
+                    numberOfLines={1}
                   >
-                    {statusLabel}
+                    {name}
                   </Text>
-                  <Text className="text-[14px]" style={{ color: t.textMuted }}>
-                    · {formatVerificationRelative(item.created_at)}
-                  </Text>
+                  <View className="mt-1 flex-row items-center gap-2">
+                    <Text
+                      className="text-[13px] font-semibold"
+                      style={{ color: statusColor, fontFamily: fonts.outfitSemiBold }}
+                    >
+                      {statusLabel}
+                    </Text>
+                    <View className="h-1 w-1 rounded-full" style={{ backgroundColor: t.textMuted }} />
+                    <Text
+                      className="text-[12px]"
+                      style={{ color: t.textSoft, fontFamily: fonts.outfitMedium }}
+                    >
+                      {formatVerificationRelative(item.created_at)}
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
